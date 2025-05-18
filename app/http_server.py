@@ -7,9 +7,7 @@ class HTTPServer(FastAPI):
     """HTTP サーバー"""
 
     def __init__(
-        self,
-        request_handler: AsyncSlackRequestHandler,
-        enable_logging: bool = False,
+        self, request_handler: AsyncSlackRequestHandler, enable_logging: bool = False
     ):
         """初期化
 
@@ -26,11 +24,11 @@ class HTTPServer(FastAPI):
 
         self._req_handler = request_handler
 
-        self.add_api_route("/status", self.status, methods=["GET"])
-        self.add_api_route("/slack/events", self.events, methods=["POST"])
+        self.add_api_route("/status", self._handle_status, methods=["GET"])
+        self.add_api_route("/slack/events", self.handle_events, methods=["POST"])
 
-    async def status(self, req: Request) -> dict:
-        """ステータス取得
+    async def _handle_status(self, req: Request) -> dict:
+        """ステータス取得リクエストを処理する
 
         Args:
             req (Request): リクエスト
@@ -45,8 +43,8 @@ class HTTPServer(FastAPI):
         logger.info(f"Query parameters: {req.query_params}")
         return {"status": "healthy"}
 
-    async def events(self, req: Request) -> Response:
-        """イベント
+    async def handle_events(self, req: Request) -> Response:
+        """イベントを処理する
 
         Args:
             req (Request): リクエスト

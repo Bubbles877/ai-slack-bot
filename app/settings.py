@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     """
 
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+    is_development: bool = False
 
     port: Optional[int] = None
 

@@ -1,3 +1,6 @@
+import asyncio
+import json
+
 from loguru import logger
 from slack_bolt.adapter.fastapi.async_handler import AsyncSlackRequestHandler
 from slack_bolt.async_app import AsyncApp, AsyncSay
@@ -28,6 +31,12 @@ class SlackBot(AsyncApp):
 
         self.req_handler = AsyncSlackRequestHandler(self)
 
+        # self._bot_id = self.client.auth_test()["user_id"]
+        # logger.info(f"Bot ID: {self._bot_id}")
+        # app_mention で開始されたスレッドの event_ts を保持するセット
+        # TODO: 複数ワーカーでは共有できない
+        self.active_threads: set[str] = set()
+
         self.event("app_mention")(self._handle_app_mentions)
         self.event("message")(self._handle_message)
 
@@ -46,8 +55,37 @@ class SlackBot(AsyncApp):
             body (dict): リクエストボディ
             say (AsyncSay): メッセージ送信
         """
-        logger.info(body)
-        await say("What's up?")
+        # logger.info(body)
+        # logger.info(f"Body: {body}")
+        logger.info(f"Body:\n{json.dumps(body, indent=2)}")
+
+        event: dict = body.get("event", {})
+        user_id = event.get("user", "")
+        event_ts = event.get("ts", "")
+        # text = event.get("text", "")
+        channel = event.get("channel", "")
+
+        if event_ts:
+            self.active_threads.add(event_ts)
+            logger.info(f"Thread {event_ts} added to active_threads by user {user_id}.")
+
+        try:
+            await self.client.reactions_add(
+                channel=channel,
+                name="eyes",
+                timestamp=event_ts,
+            )
+        except Exception as e:
+            logger.error(f"Add reaction error: {e}")
+
+        # TODO: 仮
+        await asyncio.sleep(2)
+
+        # await say(text="Hello, world!", thread_ts=event_ts)
+        await say(
+            text=f"<@{user_id}> さん、メンションありがとうございます！このスレッドで続きをどうぞ。",
+            thread_ts=event_ts,
+        )
 
     async def _handle_message(self, body: dict, say: AsyncSay) -> None:
         """'message' イベントを処理する
@@ -56,4 +94,49 @@ class SlackBot(AsyncApp):
             body (dict): リクエストボディ
             say (AsyncSay): メッセージ送信
         """
-        logger.info(f"message: {body}")
+        # logger.info(f"Body: {body}")
+        logger.info(f"Body:\n{json.dumps(body, indent=2)}")
+
+        event: dict = body.get("event", {})
+        user_id = event.get("user")
+        thread_ts = event.get("thread_ts")
+        text = event.get("text", "")
+        channel_id = event.get("channel")
+        bot_id = event.get("bot_id")
+        # event_subtype = event.get("subtype") # message_changed, thread_broadcast など
+
+        if bot_id:
+            logger.info(f"Bot message (bot_id: {bot_id}), ignoring.")
+            return
+
+        if user_id and thread_ts and thread_ts in self.active_threads:
+            logger.info(
+                f"Message from user {user_id} in active thread {thread_ts} (channel {channel_id}): '{text}'"
+            )
+
+            if "ありがとう" in text:
+                await say(text="どういたしまして！", thread_ts=thread_ts)
+            elif "進捗" in text:
+                await say(text="順調に進んでいます。", thread_ts=thread_ts)
+            elif text.lower() == "終了":
+                await say(
+                    text="このスレッドでの対応を終了します。ありがとうございました。",
+                    thread_ts=thread_ts,
+                )
+
+                if thread_ts in self.active_threads:
+                    self.active_threads.remove(thread_ts)
+                    logger.info(f"Thread {thread_ts} removed from active_threads.")
+            else:
+                await say(
+                    text=f"スレッド内で「{text}」と発言しましたね。",
+                    thread_ts=thread_ts,
+                )
+        elif user_id and thread_ts:
+            logger.debug(
+                f"Message from user {user_id} in non-active thread {thread_ts} (channel {channel_id}): '{text}'"
+            )
+        elif user_id:
+            logger.debug(
+                f"Message from user {user_id} in channel {channel_id} (not in a thread): '{text}'"
+            )

@@ -1,6 +1,7 @@
 import asyncio
 import time
 
+import uvicorn
 from loguru import logger
 from slack_bolt.adapter.fastapi.async_handler import AsyncSlackRequestHandler
 from slack_bolt.adapter.socket_mode.async_handler import AsyncSocketModeHandler
@@ -32,25 +33,14 @@ async def handle_message(body, say):
     logger.info(f"message: {body}")
 
 
-# # TODO: HTTP 起動用処理をクラスに分ける
-# api = FastAPI()
-
-
-# @api.post("/slack/events")
-# async def endpoint(req: Request):
-#     return await req_handler.handle(req)
-
-
-# @api.get("/status")
-# async def status(req: Request):
-#     """HTTP 起動の疎通確認用のエンドポイント"""
-#     logger.info(f"status called: {req}")
-#     return json.dumps({"status": "healthy"})
+api = HTTPServer(
+    request_handler=req_handler,
+    enable_logging=settings.log_level == "DEBUG",
+)
 
 
 async def _main() -> None:
     start_time = time.perf_counter()
-    # await AsyncSocketModeHandler(app, slack_settings.app_token).start_async()
     handler = AsyncSocketModeHandler(app, slack_settings.app_token)
     await handler.start_async()
     await handler.close_async()
@@ -60,28 +50,24 @@ async def _main() -> None:
     )
 
 
+logger.info(f"{__name__=}")
+
 if __name__ == "__main__":
     try:
         if slack_settings.is_socket_mode:
+            logger.info("Socket mode is enabled")
             # AsyncSocketModeHandler(app, slack_settings.app_token).start_async()
             # asyncio.run(AsyncSocketModeHandler(app, slack_settings.app_token).start_async())
             asyncio.run(_main())
         else:
-            # uvicorn.run(
-            #     # api,
-            #     # app="app.main:api",
-            #     app="main:api",
-            #     host="0.0.0.0",
-            #     port=settings.port if settings.port else 80,
-            #     reload=True,  # TODO: 本番環境では無効化
-            # )
-            # pass
-            http_server = HTTPServer(
-                port=settings.port,
-                request_handler=req_handler,
-                enable_logging=settings.log_level == "DEBUG",
+            logger.info("HTTP server starting...")
+            uvicorn.run(
+                # api,
+                app="main:api",
+                host="0.0.0.0",
+                port=settings.port if settings.port else 80,
+                reload=True,  # TODO: 本番環境では無効化
             )
-            http_server.run()
     except KeyboardInterrupt:
         logger.info("KeyboardInterrupt: Shutting down...")
     except Exception as e:

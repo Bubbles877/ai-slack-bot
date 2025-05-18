@@ -1,64 +1,57 @@
-import json
-from typing import Optional
-
-import uvicorn
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from loguru import logger
 from slack_bolt.adapter.fastapi.async_handler import AsyncSlackRequestHandler
 
-_api: Optional[FastAPI] = None
 
-
-class HTTPServer:
+class HTTPServer(FastAPI):
     """HTTP サーバー"""
 
     def __init__(
         self,
-        port: Optional[int],
         request_handler: AsyncSlackRequestHandler,
         enable_logging: bool = False,
     ):
         """初期化
 
         Args:
-            port (Optional[int]): ポート番号
             request_handler (AsyncSlackRequestHandler): リクエストハンドラー
             enable_logging (bool, optional): ログ出力を有効にするかどうか, Defaults to False.
         """
+        super().__init__()
+
         if enable_logging:
             logger.enable(__name__)
         else:
             logger.disable(__name__)
 
-        self._port = port
         self._req_handler = request_handler
 
-        global _api
-        self._api = FastAPI()
-        _api = self._api
-        # self._api.include_router(self._req_handler.app.router)
+        self.add_api_route("/status", self.status, methods=["GET"])
+        self.add_api_route("/slack/events", self.events, methods=["POST"])
 
-        @self._api.post("/slack/events")
-        async def endpoint(req: Request):
-            return await self._req_handler.handle(req)
+    async def status(self, req: Request) -> dict:
+        """ステータス取得
 
-        @self._api.get("/status")
-        async def status(req: Request):
-            """ステータス取得"""
-            logger.info(f"status called: {req}")
-            logger.info(f"status called: {repr(req)}")
-            return json.dumps({"status": "healthy"})
+        Args:
+            req (Request): リクエスト
 
-    def run(self) -> None:
-        """実行する"""
-        uvicorn.run(
-            # api,
-            # app=self._api,
-            # app="app.main:api",
-            # app="main:api",
-            # app="app.http_server:_api",
-            app=f"{__name__}:_api",
-            host="0.0.0.0",
-            port=self._port if self._port else 80,
-            reload=True,  # TODO: 本番環境では無効化
-        )
+        Returns:
+            dict: ステータス
+        """
+        logger.info("status")
+        logger.info(f"Client host: {req.client.host if req.client else 'Unknown'}")
+        logger.info(f"Request headers: {req.headers}")
+        logger.info(f"Path parameters: {req.path_params}")
+        logger.info(f"Query parameters: {req.query_params}")
+        return {"status": "healthy"}
+
+    async def events(self, req: Request) -> Response:
+        """イベント
+
+        Args:
+            req (Request): リクエスト
+
+        Returns:
+            Response: レスポンス
+        """
+        return await self._req_handler.handle(req)

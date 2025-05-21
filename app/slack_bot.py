@@ -1,5 +1,6 @@
 import asyncio
 import json
+from typing import Optional
 
 from loguru import logger
 from slack_bolt.adapter.fastapi.async_handler import AsyncSlackRequestHandler
@@ -27,18 +28,30 @@ class SlackBot(AsyncApp):
         else:
             logger.disable(__name__)
 
-        self.slack_settings = settings
+        self._settings = settings
+        logger.debug(f"Settings:\n{self._settings.model_dump_json(indent=2)}")
 
-        self.req_handler = AsyncSlackRequestHandler(self)
+        self._req_handler = AsyncSlackRequestHandler(self)
 
         # self._bot_id = self.client.auth_test()["user_id"]
         # logger.info(f"Bot ID: {self._bot_id}")
         # app_mention で開始されたスレッドの event_ts を保持するセット
-        # TODO: 複数ワーカーでは共有できない
+        # TODO: 複数ワーカーでは共有できない -> Redis などで共有する
         self.active_threads: set[str] = set()
 
         self.event("app_mention")(self._handle_app_mentions)
         self.event("message")(self._handle_message)
+
+        self._bot_id: Optional[str] = None
+
+    async def setup(self) -> None:
+        """セットアップする"""
+        logger.debug("Setting up...")
+
+        res = await self.client.auth_test()
+        self._bot_id = res.get("user_id", "")
+        logger.debug(f"Bot ID: {self._bot_id}")
+        logger.debug("Setup done.")
 
     def request_handler(self) -> AsyncSlackRequestHandler:
         """リクエストハンドラー
@@ -46,7 +59,7 @@ class SlackBot(AsyncApp):
         Returns:
             AsyncSlackRequestHandler: リクエストハンドラー
         """
-        return self.req_handler
+        return self._req_handler
 
     async def _handle_app_mentions(self, body: dict, say: AsyncSay) -> None:
         """'app_mention' イベントを処理する
@@ -78,10 +91,25 @@ class SlackBot(AsyncApp):
         except Exception as e:
             logger.error(f"Add reaction error: {e}")
 
+        # if not self._bot_id:
+        #     res = await self.client.auth_test()
+        #     self._bot_id = res.get("user_id", "")
+        #     logger.info(f"Bot ID: {self._bot_id}")
+
+        #     auth: dict = body.get("authorizations", [{}])[0]
+        #     logger.info(f"Auth: {auth}")
+        #     logger.info(f"Auth: {json.dumps(auth, indent=2)}")
+        #     if auth.get("is_bot"):
+        #         bot_user_id = auth.get("user_id")
+        #         logger.info(f"Bot user ID: {bot_user_id}")
+        #         if bot_user_id != self._bot_id:
+        #             logger.warning(
+        #                 f"Bot user ID {bot_user_id} does not match the bot ID {self._bot_id}."
+        #             )
+
         # TODO: 仮
         await asyncio.sleep(2)
 
-        # await say(text="Hello, world!", thread_ts=event_ts)
         await say(
             text=f"<@{user_id}> さん、メンションありがとうございます！このスレッドで続きをどうぞ。",
             thread_ts=event_ts,
@@ -98,12 +126,14 @@ class SlackBot(AsyncApp):
         logger.info(f"Body:\n{json.dumps(body, indent=2)}")
 
         event: dict = body.get("event", {})
-        user_id = event.get("user")
-        thread_ts = event.get("thread_ts")
-        text = event.get("text", "")
-        channel_id = event.get("channel")
-        bot_id = event.get("bot_id")
+        user_id: str = event.get("user", "")
+        thread_ts: str = event.get("thread_ts", "")
+        text: str = event.get("text", "")
+        channel_id: str = event.get("channel", "")
+        bot_id: str = event.get("bot_id", "")
         # event_subtype = event.get("subtype") # message_changed, thread_broadcast など
+
+        # TODO: "channel_type": "im" ならメンションなくても返答するとか
 
         if bot_id:
             logger.info(f"Bot message (bot_id: {bot_id}), ignoring.")

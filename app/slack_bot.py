@@ -1,5 +1,6 @@
 import asyncio
 import json
+import time
 from typing import Optional
 
 from loguru import logger
@@ -33,16 +34,13 @@ class SlackBot(AsyncApp):
 
         self._req_handler = AsyncSlackRequestHandler(self)
 
-        # self._bot_id = self.client.auth_test()["user_id"]
-        # logger.info(f"Bot ID: {self._bot_id}")
+        self._bot_id: Optional[str] = None
         # app_mention で開始されたスレッドの event_ts を保持するセット
         # TODO: 複数ワーカーでは共有できない -> Redis などで共有する
         self.active_threads: set[str] = set()
 
         self.event("app_mention")(self._handle_app_mentions)
         self.event("message")(self._handle_message)
-
-        self._bot_id: Optional[str] = None
 
     async def setup(self) -> None:
         """セットアップする"""
@@ -68,9 +66,9 @@ class SlackBot(AsyncApp):
             body (dict): リクエストボディ
             say (AsyncSay): メッセージ送信
         """
-        # logger.info(body)
-        # logger.info(f"Body: {body}")
-        logger.info(f"Body:\n{json.dumps(body, indent=2)}")
+        # logger.info(f"App mentions: {body}")
+        logger.info(f"App mentions:\n{json.dumps(body, indent=2)}")
+        func_start_time = time.perf_counter()
 
         event: dict = body.get("event", {})
         user_id = event.get("user", "")
@@ -92,12 +90,7 @@ class SlackBot(AsyncApp):
             logger.error(f"Add reaction error: {e}")
 
         # if not self._bot_id:
-        #     res = await self.client.auth_test()
-        #     self._bot_id = res.get("user_id", "")
-        #     logger.info(f"Bot ID: {self._bot_id}")
-
         #     auth: dict = body.get("authorizations", [{}])[0]
-        #     logger.info(f"Auth: {auth}")
         #     logger.info(f"Auth: {json.dumps(auth, indent=2)}")
         #     if auth.get("is_bot"):
         #         bot_user_id = auth.get("user_id")
@@ -115,6 +108,10 @@ class SlackBot(AsyncApp):
             thread_ts=event_ts,
         )
 
+        logger.info(
+            f"App mention done (executed in {time.perf_counter() - func_start_time:.2f}s)"
+        )
+
     async def _handle_message(self, body: dict, say: AsyncSay) -> None:
         """'message' イベントを処理する
 
@@ -122,8 +119,8 @@ class SlackBot(AsyncApp):
             body (dict): リクエストボディ
             say (AsyncSay): メッセージ送信
         """
-        # logger.info(f"Body: {body}")
-        logger.info(f"Body:\n{json.dumps(body, indent=2)}")
+        # logger.info(f"Message: {body}")
+        logger.info(f"Message:\n{json.dumps(body, indent=2)}")
 
         event: dict = body.get("event", {})
         user_id: str = event.get("user", "")

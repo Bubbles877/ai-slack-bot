@@ -36,9 +36,7 @@ class HTTPServer(FastAPI):
         self._cleanup_callback = cleanup_callback
 
         self.add_api_route("/status", self._handle_status, methods=["GET"])
-        self.add_api_route("/slack/events", self.handle_events, methods=["POST"])
-
-        # self.state.
+        self.add_api_route("/slack/events", self._handle_events, methods=["POST"])
 
     @asynccontextmanager
     async def _lifespan_manager(self, app: FastAPI):
@@ -73,7 +71,7 @@ class HTTPServer(FastAPI):
         logger.info(f"Query parameters: {req.query_params}")
         return {"status": "healthy"}
 
-    async def handle_events(self, req: Request) -> Response:
+    async def _handle_events(self, req: Request) -> Response:
         """イベントを処理する
 
         Args:

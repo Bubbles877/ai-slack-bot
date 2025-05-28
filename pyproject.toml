@@ -9,11 +9,13 @@ license = {text = "Apache-2.0"}
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
 dependencies = [
+    "aiofiles (>=24.1.0,<25.0.0)",
     "aiohttp (>=3.11.18,<4.0.0)",
     "fastapi (>=0.115.12,<0.116.0)",
     "gunicorn (>=23.0.0,<24.0.0)",
     "langchain (>=0.3.25,<0.4.0)",
     "langchain-core (>=0.3.59,<0.4.0)",
+    "langchain-openai (>=0.3.18,<0.4.0)",
     "loguru (>=0.7.3,<0.8.0)",
     "pydantic (>=2.11.4,<3.0.0)",
     "pydantic-settings (>=2.9.1,<3.0.0)",
@@ -21,12 +23,14 @@ dependencies = [
     "uvicorn (>=0.34.2,<0.35.0)"
 ]
 
-
-[build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
+[tool.poetry.group.dev.dependencies]
+types-aiofiles = "^24.1.0.20250516"
 
 [tool.mypy]
 plugins = [
     "pydantic.mypy"
 ]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

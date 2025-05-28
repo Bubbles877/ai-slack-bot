@@ -68,7 +68,7 @@ class SlackBot(AsyncApp):
         """
         # logger.info(f"App mentions: {body}")
         logger.info(f"App mentions:\n{json.dumps(body, indent=2)}")
-        func_start_time = time.perf_counter()
+        start_time = time.perf_counter()
 
         event: dict = body.get("event", {})
         user_id = event.get("user", "")
@@ -109,7 +109,7 @@ class SlackBot(AsyncApp):
         )
 
         logger.info(
-            f"App mention done (executed in {time.perf_counter() - func_start_time:.2f}s)"
+            f"App mention done (executed in {time.perf_counter() - start_time:.2f}s)"
         )
 
     async def _handle_message(self, body: dict, say: AsyncSay) -> None:

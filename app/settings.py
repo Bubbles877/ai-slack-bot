@@ -14,6 +14,9 @@ class Settings(BaseSettings):
 
     port: Optional[int] = None
 
+    llm_instruction_file_path: Optional[str] = None
+    llm_max_messages: int = -1
+
     model_config = SettingsConfigDict(
         extra="ignore",
         env_file=".env",

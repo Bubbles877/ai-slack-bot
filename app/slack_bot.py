@@ -106,7 +106,21 @@ class SlackBot(AsyncApp):
             logger.info(f"Ignoring message from self (ID: {user_id}).")
             return
 
-        is_mentioned = self._is_bot_mentioned(text)
+        # is_mentioned = self._is_bot_mentioned(text, event.get("blocks"))
+        is_mentioned = False
+
+        if blocks := event.get("blocks"):
+            mentioned_users = self._extract_mentioned_users(blocks)
+            is_mentioned = self._bot_id in mentioned_users
+
+            # 自分の Bot ID にメンションが無く、他のユーザーにメンションがある場合は無視する
+            if not is_mentioned and mentioned_users:
+                logger.debug(
+                    f"Message from user {user_id} in channel {channel_id} ignored "
+                    f"(mentions other users {mentioned_users} but not this bot): '{text}'"
+                )
+                return
+
         is_direct_msg = channel_type == "im"
         is_active_thread = thread_ts in self.active_threads
         should_process = is_mentioned or is_direct_msg or is_active_thread
@@ -175,13 +189,43 @@ class SlackBot(AsyncApp):
 
         await say(text=res, thread_ts=thread_ts)
 
-    def _is_bot_mentioned(self, text: str) -> bool:
-        if not self._bot_id:
-            return False
+    # def _is_bot_mentioned(self, text: str, blocks: Optional[list] = None) -> bool:
+    #     if not self._bot_id:
+    #         return False
 
-        # <@U123456789> 形式のメンションをチェック
-        # TODO: [event][blocks] リスト内の [elements] リスト内の [user_id] でも分かるかも
-        return f"<@{self._bot_id}>" in text
+    #     # テキスト内の <@U123456789> 形式のメンションをチェック
+    #     if f"<@{self._bot_id}>" in text:
+    #         return True
+
+    #     # blocks からメンションされたユーザー ID を取得してチェック
+    #     if blocks:
+    #         mentioned_users = self._extract_mentioned_users(blocks)
+    #         if self._bot_id in mentioned_users:
+    #             return True
+
+    #     return False
+
+    def _extract_mentioned_users(self, blocks: list[dict]) -> set[str]:
+        mentioned_users: set[str] = set()
+
+        for block in blocks:
+            if block.get("type") != "rich_text":
+                continue
+
+            elements = block.get("elements", [])
+            for element in elements:
+                if element.get("type") != "rich_text_section":
+                    continue
+
+                sub_elements = element.get("elements", [])
+                for sub_element in sub_elements:
+                    if sub_element.get("type") != "user":
+                        continue
+
+                    if user_id := sub_element.get("user_id"):
+                        mentioned_users.add(user_id)
+
+        return mentioned_users
 
     async def _get_thread_history(
         self, channel_id: str, thread_ts: str

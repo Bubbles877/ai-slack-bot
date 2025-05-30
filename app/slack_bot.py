@@ -1,7 +1,6 @@
-import asyncio
 import json
 import time
-from typing import Optional
+from typing import Awaitable, Callable, Literal, Optional, TypedDict
 
 from loguru import logger
 from slack_bolt.adapter.fastapi.async_handler import AsyncSlackRequestHandler
@@ -10,14 +9,26 @@ from slack_bolt.async_app import AsyncApp, AsyncSay
 from util.setting.slack_settings import SlackSettings
 
 
+class SlackMessage(TypedDict):
+    # role: str  # "user" または "bot" を想定
+    role: Literal["user", "bot"]
+    content: str
+
+
 class SlackBot(AsyncApp):
     """Slack Bot"""
 
-    def __init__(self, settings: SlackSettings, enable_logging: bool = False):
+    def __init__(
+        self,
+        settings: SlackSettings,
+        chat_callback: Callable[[str, Optional[list[SlackMessage]]], Awaitable[str]],
+        enable_logging: bool = False,
+    ):
         """初期化
 
         Args:
             slack_settings (SlackSettings): Slack 設定
+            chat_callback (Callable[[str, Optional[list[SlackMessage]]], Awaitable[str]]): 会話のコールバック
             enable_logging (bool, optional): ログ出力を有効にするかどうか, Defaults to False.
         """
         super().__init__(
@@ -30,6 +41,8 @@ class SlackBot(AsyncApp):
             logger.disable(__name__)
 
         self._settings = settings
+        self._chat_callback = chat_callback
+
         logger.debug(f"Settings:\n{self._settings.model_dump_json(indent=2)}")
 
         self._req_handler = AsyncSlackRequestHandler(self)
@@ -72,9 +85,10 @@ class SlackBot(AsyncApp):
 
         event: dict = body.get("event", {})
         user_id = event.get("user", "")
-        event_ts = event.get("ts", "")
-        # text = event.get("text", "")
+        # event_ts = event.get("ts", "")  # 1748596312.340719
+        text = event.get("text", "")
         channel = event.get("channel", "")
+        event_ts = event.get("event_ts", "")  # 1748596312.340719
 
         if event_ts:
             self.active_threads.add(event_ts)
@@ -101,12 +115,29 @@ class SlackBot(AsyncApp):
         #             )
 
         # TODO: 仮
-        await asyncio.sleep(2)
+        # await asyncio.sleep(2)
 
+        if user_id == self._bot_id:
+            # 自分自身からのメンションは来ないかも
+            logger.info(f"Ignoring app mention from self (user_id: {user_id}).")
+            return
+
+        history: list[SlackMessage] = []
+
+        res = await self._chat_callback(text, history)
+        logger.debug(f"Response: {res}")
+
+        if not res:
+            res = "エラーが発生しました。しばらくしてから再度お試しください。"
         await say(
-            text=f"<@{user_id}> さん、メンションありがとうございます！このスレッドで続きをどうぞ。",
+            text=f"<@{user_id}>\n{res}",
             thread_ts=event_ts,
         )
+        logger.debug(f"Response sent to thread {event_ts} in channel {channel}.")
+        # await say(
+        #     text=f"<@{user_id}> さん、メンションありがとうございます！このスレッドで続きをどうぞ。",
+        #     thread_ts=event_ts,
+        # )
 
         logger.info(
             f"App mention done (executed in {time.perf_counter() - start_time:.2f}s)"
@@ -124,9 +155,11 @@ class SlackBot(AsyncApp):
 
         event: dict = body.get("event", {})
         user_id: str = event.get("user", "")
+        ts: str = event.get("ts", "")
         thread_ts: str = event.get("thread_ts", "")
         text: str = event.get("text", "")
         channel_id: str = event.get("channel", "")
+        event_ts: str = event.get("event_ts", "")
         bot_id: str = event.get("bot_id", "")
         # event_subtype = event.get("subtype") # message_changed, thread_broadcast など
 

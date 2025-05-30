@@ -4,6 +4,7 @@ import traceback
 from typing import Optional
 
 import uvicorn
+from langchain_core.messages import AIMessage, AnyMessage, HumanMessage
 from loguru import logger
 from slack_bolt.adapter.socket_mode.async_handler import AsyncSocketModeHandler
 from slack_bolt.async_app import AsyncApp
@@ -12,7 +13,7 @@ import util.llm_utils as llm_utils
 from app.http_server import HTTPServer
 from app.resource_loader import ResourceLoader
 from app.settings import Settings
-from app.slack_bot import SlackBot
+from app.slack_bot import SlackBot, SlackMessage
 from util.llm_chat import LLMChat
 from util.setting.llm_settings import LLMSettings
 from util.setting.slack_settings import SlackSettings
@@ -35,7 +36,7 @@ class Main:
 
         self._resource_loader = ResourceLoader(enable_logging=True)
 
-        self._bot = SlackBot(settings=self._slack_settings, enable_logging=True)
+        self._bot = SlackBot(self._slack_settings, self._chat, enable_logging=True)
         self._http_server: Optional[HTTPServer] = None
 
         if not self._slack_settings.is_socket_mode:
@@ -113,6 +114,36 @@ class Main:
             rotation="1 day",
             retention="7 days",
         )
+
+    async def _chat(
+        self, user_message: str, history: Optional[list[SlackMessage]] = None
+    ) -> str:
+        logger.debug(f"(User) {user_message}")
+        hist: Optional[list[AnyMessage]] = None
+
+        if history:
+            hist = self._to_llm_messages(history)
+
+        ai_res = await self._llm_chat.ainvoke(user_message, hist)
+        logger.debug(f"(AI) {ai_res}")
+        return ai_res
+
+    @staticmethod
+    def _to_llm_messages(messages: list[SlackMessage]) -> list[AnyMessage]:
+        msgs: list[AnyMessage] = []
+
+        for msg in messages:
+            role = msg.get("role", "")
+            content = str(msg.get("content", ""))
+            match role:
+                case "user":
+                    msgs.append(HumanMessage(content=content))
+                case "bot":
+                    msgs.append(AIMessage(content=content))
+                case _:
+                    logger.warning(f"Unknown role: {role}")
+
+        return msgs
 
 
 async def _socket_mode_main(main: Main, app_token: Optional[str]) -> None:

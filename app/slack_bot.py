@@ -1,3 +1,4 @@
+import asyncio
 import json
 import time
 from typing import Awaitable, Callable, Literal, Optional, TypedDict
@@ -10,7 +11,6 @@ from util.setting.slack_settings import SlackSettings
 
 
 class SlackMessage(TypedDict):
-    # role: str  # "user" または "bot" を想定
     role: Literal["user", "bot"]
     content: str
 
@@ -48,7 +48,7 @@ class SlackBot(AsyncApp):
         self._req_handler = AsyncSlackRequestHandler(self)
 
         self._bot_id: Optional[str] = None
-        # app_mention で開始されたスレッドの event_ts を保持するセット
+        # app_mention されたスレッドの thread_ts を保持するセット
         # TODO: 複数ワーカーでは共有できない -> Redis などで共有する
         self.active_threads: set[str] = set()
 
@@ -72,50 +72,157 @@ class SlackBot(AsyncApp):
         """
         return self._req_handler
 
-    async def _handle_app_mentions(self, body: dict, say: AsyncSay) -> None:
-        """'app_mention' イベントを処理する
+    async def _handle_message(self, body: dict, say: AsyncSay) -> None:
+        """'message' イベントを処理する
 
         Args:
             body (dict): リクエストボディ
             say (AsyncSay): メッセージ送信
         """
-        # logger.info(f"App mentions: {body}")
+        logger.info(f"Message:\n{json.dumps(body, indent=2)}")
+        start_time = time.perf_counter()
+
+        event: dict = body.get("event", {})
+        user_id: str = event.get("user", "")
+        ts: str = event.get("ts", "")
+        # thread_ts: str = event.get("thread_ts", "")
+        thread_ts: str = event.get("thread_ts", ts)
+        text: str = event.get("text", "")
+        channel_id: str = event.get("channel", "")
+        bot_id: str = event.get("bot_id", "")
+        channel_type: str = event.get("channel_type", "")
+
+        is_thread = bool(thread_ts and thread_ts != ts)
+
+        if bot_id:
+            logger.info(f"Bot message (bot_id: {bot_id}), ignoring.")
+            return
+
+        if not user_id:
+            logger.debug("Message without user_id, ignoring.")
+            return
+
+        if user_id == self._bot_id:
+            # 自分自身からのメンションは来ないかも
+            logger.info(f"Ignoring message from self (user_id: {user_id}).")
+            return
+
+        # # ボットへのメンションがあるかチェック
+        # is_bot_mentioned = self._is_bot_mentioned(text)
+
+        # DM の場合は常に応答
+        is_direct_message = channel_type == "im"
+
+        # スレッド内でボットが以前に応答したことがあるかチェック
+        # is_active_thread = thread_ts and thread_ts in self.active_threads
+        is_active_thread = thread_ts in self.active_threads
+
+        # if is_bot_mentioned or is_direct_message or is_active_thread:
+        if not is_direct_message and not is_active_thread:
+            logger.debug(
+                f"Message from user {user_id} in channel {channel_id} ignored "
+                f"(not DM, not in active thread): '{text}'"
+            )
+            return
+
+        logger.info(
+            f"Processing message from user {user_id} in channel {channel_id}"
+            f"{f' (thread: {thread_ts})' if thread_ts else ''}: '{text}'"
+            # f" | mentioned: {is_bot_mentioned}, DM: {is_direct_message}, active_thread: {is_active_thread}"
+            f" | DM: {is_direct_message}, active_thread: {is_active_thread}"
+        )
+
+        # # 応答を決定するスレッドタイムスタンプ
+        # response_thread_ts = thread_ts if thread_ts else ts
+
+        # アクティブスレッドとして記録
+        if not is_active_thread:
+            self.active_threads.add(thread_ts)
+            logger.debug(f"Thread {thread_ts} added to active_threads.")
+
+        # 受け付けリアクションを追加
+        try:
+            await self.client.reactions_add(
+                channel=channel_id,
+                name="eyes",
+                timestamp=ts,
+            )
+        except Exception as e:
+            logger.error(f"Add reaction error: {e}")
+
+        # 遅延処理（リアクション追加後に少し待つ）
+        await asyncio.sleep(1)
+
+        # メッセージ履歴を取得（スレッドの場合）
+        history: list[SlackMessage] = []
+        if is_thread:
+            history = await self._get_thread_history(channel_id, thread_ts)
+
+        try:
+            res = await self._chat_callback(text, history)
+            logger.debug(f"Response: {res}")
+
+            if not res:
+                res = "エラーが発生しました。しばらくしてから再度お試しください。"
+
+            await say(
+                text=f"<@{user_id}>\n{res}",
+                thread_ts=thread_ts,
+            )
+            logger.debug(
+                f"Response sent to thread {thread_ts} in channel {channel_id}."
+            )
+        except Exception as e:
+            logger.error(f"Error processing chat: {e}")
+            await say(
+                text=f"<@{user_id}>\n申し訳ございません。処理中にエラーが発生しました。",
+                thread_ts=thread_ts,
+            )
+
+        logger.info(
+            f"Message processing done (executed in {time.perf_counter() - start_time:.2f}s)"
+        )
+
+    async def _handle_app_mentions(self, body: dict, say: AsyncSay) -> None:
+        """'app_mention' イベントを処理する
+
+        メンションある場合は、'message' と 'app_mention' が続けて来る。
+
+        Args:
+            body (dict): リクエストボディ
+            say (AsyncSay): メッセージ送信
+        """
         logger.info(f"App mentions:\n{json.dumps(body, indent=2)}")
         start_time = time.perf_counter()
 
         event: dict = body.get("event", {})
-        user_id = event.get("user", "")
-        # event_ts = event.get("ts", "")  # 1748596312.340719
-        text = event.get("text", "")
-        channel = event.get("channel", "")
-        event_ts = event.get("event_ts", "")  # 1748596312.340719
+        user_id: str = event.get("user", "")
+        ts: str = event.get("ts", "")  # 1748596312.340719
+        # thread_ts: str = event.get("thread_ts", "")
+        thread_ts: str = event.get("thread_ts", ts)
+        text: str = event.get("text", "")
+        channel: str = event.get("channel", "")
 
-        if event_ts:
-            self.active_threads.add(event_ts)
-            logger.info(f"Thread {event_ts} added to active_threads by user {user_id}.")
+        # is_active_thread = thread_ts and thread_ts in self.active_threads
+        if thread_ts in self.active_threads:
+            logger.info(
+                f"Thread {thread_ts} is already active, ignoring app mention from user {user_id}."
+            )
+            return
+
+        self.active_threads.add(thread_ts)
+        logger.debug(f"Thread {thread_ts} added to active_threads.")
+
+        # TODO: この先の処理は共通化する
 
         try:
             await self.client.reactions_add(
                 channel=channel,
                 name="eyes",
-                timestamp=event_ts,
+                timestamp=thread_ts,
             )
         except Exception as e:
             logger.error(f"Add reaction error: {e}")
-
-        # if not self._bot_id:
-        #     auth: dict = body.get("authorizations", [{}])[0]
-        #     logger.info(f"Auth: {json.dumps(auth, indent=2)}")
-        #     if auth.get("is_bot"):
-        #         bot_user_id = auth.get("user_id")
-        #         logger.info(f"Bot user ID: {bot_user_id}")
-        #         if bot_user_id != self._bot_id:
-        #             logger.warning(
-        #                 f"Bot user ID {bot_user_id} does not match the bot ID {self._bot_id}."
-        #             )
-
-        # TODO: 仮
-        # await asyncio.sleep(2)
 
         if user_id == self._bot_id:
             # 自分自身からのメンションは来ないかも
@@ -131,72 +238,67 @@ class SlackBot(AsyncApp):
             res = "エラーが発生しました。しばらくしてから再度お試しください。"
         await say(
             text=f"<@{user_id}>\n{res}",
-            thread_ts=event_ts,
+            thread_ts=thread_ts,
         )
-        logger.debug(f"Response sent to thread {event_ts} in channel {channel}.")
-        # await say(
-        #     text=f"<@{user_id}> さん、メンションありがとうございます！このスレッドで続きをどうぞ。",
-        #     thread_ts=event_ts,
-        # )
 
         logger.info(
             f"App mention done (executed in {time.perf_counter() - start_time:.2f}s)"
         )
 
-    async def _handle_message(self, body: dict, say: AsyncSay) -> None:
-        """'message' イベントを処理する
+    # def _is_bot_mentioned(self, text: str) -> bool:
+    #     """ボットがメンションされているかチェックする
+
+    #     Args:
+    #         text (str): メッセージテキスト
+
+    #     Returns:
+    #         bool: メンションされている場合 True
+    #     """
+    #     if not self._bot_id:
+    #         return False
+
+    #     # <@U123456789> 形式のメンションをチェック
+    #     # TODO: [event][blocks] リスト内の [elements] リスト内の [user_id] でも分かるかも
+    #     return f"<@{self._bot_id}>" in text
+
+    async def _get_thread_history(
+        self, channel_id: str, thread_ts: str
+    ) -> list[SlackMessage]:
+        """スレッドの履歴を取得する
 
         Args:
-            body (dict): リクエストボディ
-            say (AsyncSay): メッセージ送信
+            channel_id (str): チャンネルID
+            thread_ts (str): スレッドタイムスタンプ
+
+        Returns:
+            list[SlackMessage]: メッセージ履歴
         """
-        # logger.info(f"Message: {body}")
-        logger.info(f"Message:\n{json.dumps(body, indent=2)}")
-
-        event: dict = body.get("event", {})
-        user_id: str = event.get("user", "")
-        ts: str = event.get("ts", "")
-        thread_ts: str = event.get("thread_ts", "")
-        text: str = event.get("text", "")
-        channel_id: str = event.get("channel", "")
-        event_ts: str = event.get("event_ts", "")
-        bot_id: str = event.get("bot_id", "")
-        # event_subtype = event.get("subtype") # message_changed, thread_broadcast など
-
-        # TODO: "channel_type": "im" ならメンションなくても返答するとか
-
-        if bot_id:
-            logger.info(f"Bot message (bot_id: {bot_id}), ignoring.")
-            return
-
-        if user_id and thread_ts and thread_ts in self.active_threads:
-            logger.info(
-                f"Message from user {user_id} in active thread {thread_ts} (channel {channel_id}): '{text}'"
+        try:
+            response = await self.client.conversations_replies(
+                channel=channel_id,
+                ts=thread_ts,
+                limit=20,  # 最新20件まで取得
             )
-
-            if "ありがとう" in text:
-                await say(text="どういたしまして！", thread_ts=thread_ts)
-            elif "進捗" in text:
-                await say(text="順調に進んでいます。", thread_ts=thread_ts)
-            elif text.lower() == "終了":
-                await say(
-                    text="このスレッドでの対応を終了します。ありがとうございました。",
-                    thread_ts=thread_ts,
-                )
-
-                if thread_ts in self.active_threads:
-                    self.active_threads.remove(thread_ts)
-                    logger.info(f"Thread {thread_ts} removed from active_threads.")
-            else:
-                await say(
-                    text=f"スレッド内で「{text}」と発言しましたね。",
-                    thread_ts=thread_ts,
-                )
-        elif user_id and thread_ts:
+            # logger.debug(f"Thread history response: {response}")
+            # 詳しくログを出力する
             logger.debug(
-                f"Message from user {user_id} in non-active thread {thread_ts} (channel {channel_id}): '{text}'"
+                f"Thread history response: {json.dumps(response, indent=2, ensure_ascii=False)}"
             )
-        elif user_id:
-            logger.debug(
-                f"Message from user {user_id} in channel {channel_id} (not in a thread): '{text}'"
-            )
+
+            msgs: list[SlackMessage] = []
+            for msg in response.get("messages", []):  # type: dict
+                user_id = msg.get("user")
+                bot_id = msg.get("bot_id")
+                text = msg.get("text", "")
+
+                if user_id == self._bot_id or bot_id:
+                    # ボットのメッセージ
+                    msgs.append({"role": "bot", "content": text})
+                elif user_id:
+                    # ユーザーのメッセージ
+                    msgs.append({"role": "user", "content": text})
+
+            return msgs
+        except Exception as e:
+            logger.error(f"Error getting thread history: {e}")
+            return []

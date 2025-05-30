@@ -1,4 +1,3 @@
-import asyncio
 import json
 import time
 from typing import Awaitable, Callable, Literal, Optional, TypedDict
@@ -107,17 +106,12 @@ class SlackBot(AsyncApp):
             logger.info(f"Ignoring message from self (user_id: {user_id}).")
             return
 
-        # # ボットへのメンションがあるかチェック
-        # is_bot_mentioned = self._is_bot_mentioned(text)
-
         # DM の場合は常に応答
         is_direct_message = channel_type == "im"
 
         # スレッド内でボットが以前に応答したことがあるかチェック
-        # is_active_thread = thread_ts and thread_ts in self.active_threads
         is_active_thread = thread_ts in self.active_threads
 
-        # if is_bot_mentioned or is_direct_message or is_active_thread:
         if not is_direct_message and not is_active_thread:
             logger.debug(
                 f"Message from user {user_id} in channel {channel_id} ignored "
@@ -128,30 +122,22 @@ class SlackBot(AsyncApp):
         logger.info(
             f"Processing message from user {user_id} in channel {channel_id}"
             f"{f' (thread: {thread_ts})' if thread_ts else ''}: '{text}'"
-            # f" | mentioned: {is_bot_mentioned}, DM: {is_direct_message}, active_thread: {is_active_thread}"
             f" | DM: {is_direct_message}, active_thread: {is_active_thread}"
         )
-
-        # # 応答を決定するスレッドタイムスタンプ
-        # response_thread_ts = thread_ts if thread_ts else ts
 
         # アクティブスレッドとして記録
         if not is_active_thread:
             self.active_threads.add(thread_ts)
             logger.debug(f"Thread {thread_ts} added to active_threads.")
 
-        # 受け付けリアクションを追加
+        # TODO: この先の処理は共通化する
+
         try:
             await self.client.reactions_add(
-                channel=channel_id,
-                name="eyes",
-                timestamp=ts,
+                channel=channel_id, name="eyes", timestamp=ts
             )
         except Exception as e:
             logger.error(f"Add reaction error: {e}")
-
-        # 遅延処理（リアクション追加後に少し待つ）
-        await asyncio.sleep(1)
 
         # メッセージ履歴を取得（スレッドの場合）
         history: list[SlackMessage] = []
@@ -201,7 +187,14 @@ class SlackBot(AsyncApp):
         # thread_ts: str = event.get("thread_ts", "")
         thread_ts: str = event.get("thread_ts", ts)
         text: str = event.get("text", "")
-        channel: str = event.get("channel", "")
+        channel_id: str = event.get("channel", "")
+
+        is_thread = bool(thread_ts and thread_ts != ts)
+
+        if user_id == self._bot_id:
+            # 自分自身からのメンションは来ないかも
+            logger.info(f"Ignoring app mention from self (user_id: {user_id}).")
+            return
 
         # is_active_thread = thread_ts and thread_ts in self.active_threads
         if thread_ts in self.active_threads:
@@ -217,25 +210,22 @@ class SlackBot(AsyncApp):
 
         try:
             await self.client.reactions_add(
-                channel=channel,
-                name="eyes",
-                timestamp=thread_ts,
+                channel=channel_id, name="eyes", timestamp=ts
             )
         except Exception as e:
             logger.error(f"Add reaction error: {e}")
 
-        if user_id == self._bot_id:
-            # 自分自身からのメンションは来ないかも
-            logger.info(f"Ignoring app mention from self (user_id: {user_id}).")
-            return
-
+        # メッセージ履歴を取得（スレッドの場合）
         history: list[SlackMessage] = []
+        if is_thread:
+            history = await self._get_thread_history(channel_id, thread_ts)
 
         res = await self._chat_callback(text, history)
         logger.debug(f"Response: {res}")
 
         if not res:
             res = "エラーが発生しました。しばらくしてから再度お試しください。"
+
         await say(
             text=f"<@{user_id}>\n{res}",
             thread_ts=thread_ts,
@@ -244,22 +234,6 @@ class SlackBot(AsyncApp):
         logger.info(
             f"App mention done (executed in {time.perf_counter() - start_time:.2f}s)"
         )
-
-    # def _is_bot_mentioned(self, text: str) -> bool:
-    #     """ボットがメンションされているかチェックする
-
-    #     Args:
-    #         text (str): メッセージテキスト
-
-    #     Returns:
-    #         bool: メンションされている場合 True
-    #     """
-    #     if not self._bot_id:
-    #         return False
-
-    #     # <@U123456789> 形式のメンションをチェック
-    #     # TODO: [event][blocks] リスト内の [elements] リスト内の [user_id] でも分かるかも
-    #     return f"<@{self._bot_id}>" in text
 
     async def _get_thread_history(
         self, channel_id: str, thread_ts: str

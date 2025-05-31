@@ -102,11 +102,10 @@ class SlackBot(AsyncApp):
             return
 
         if user_id == self._bot_id:
-            # 自分自身からのメンションは来ないかも
+            # 自分自身からのメンションは来ないと思われるが念のため
             logger.info(f"Ignoring message from self (ID: {user_id}).")
             return
 
-        # is_mentioned = self._is_bot_mentioned(text, event.get("blocks"))
         is_mentioned = False
 
         if blocks := event.get("blocks"):
@@ -139,7 +138,7 @@ class SlackBot(AsyncApp):
         )
 
         if (is_mentioned or is_direct_msg) and not is_active_thread:
-            # 監視スレッドに登録する
+            # 監視スレッドとして登録する
             self.active_threads.add(thread_ts)
             logger.debug(f"Thread {thread_ts} added to active_threads.")
 
@@ -188,22 +187,6 @@ class SlackBot(AsyncApp):
             res = "エラーが発生しました。しばらくしてから再度お試しください。"
 
         await say(text=res, thread_ts=thread_ts)
-
-    # def _is_bot_mentioned(self, text: str, blocks: Optional[list] = None) -> bool:
-    #     if not self._bot_id:
-    #         return False
-
-    #     # テキスト内の <@U123456789> 形式のメンションをチェック
-    #     if f"<@{self._bot_id}>" in text:
-    #         return True
-
-    #     # blocks からメンションされたユーザー ID を取得してチェック
-    #     if blocks:
-    #         mentioned_users = self._extract_mentioned_users(blocks)
-    #         if self._bot_id in mentioned_users:
-    #             return True
-
-    #     return False
 
     def _extract_mentioned_users(self, blocks: list[dict]) -> set[str]:
         mentioned_users: set[str] = set()

@@ -73,9 +73,6 @@ class Main:
         """終了処理をする"""
         logger.debug("Cleaning up...")
 
-        # TODO: 仮
-        await asyncio.sleep(1)
-
         logger.debug("Cleanup complete")
 
     # def bot(self) -> SlackBot:

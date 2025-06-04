@@ -43,7 +43,9 @@ class SlackBot(AsyncApp):
         self._settings = settings
         self._chat_callback = chat_callback
 
-        logger.debug(f"Settings:\n{self._settings.model_dump_json(indent=2)}")
+        logger.debug(
+            f"Settings:\n{self._settings.model_dump_json(indent=2, exclude={'app_token', 'bot_token', 'signing_secret'})}"
+        )
 
         self._req_handler = AsyncSlackRequestHandler(self)
 

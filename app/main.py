@@ -193,10 +193,8 @@ llm_settings = LLMSettings()
 if __name__ == "__main__":
     # python app/main.py で直接実行された場合
     if slack_settings.is_socket_mode:
-        main_instance_for_socket = Main(settings, slack_settings, llm_settings)
-        asyncio.run(
-            _socket_mode_main(main_instance_for_socket, slack_settings.app_token)
-        )
+        main = Main(settings, slack_settings, llm_settings)
+        asyncio.run(_socket_mode_main(main, slack_settings.app_token))
     else:
         # HTTPサーバーモードで uvicorn を直接実行する場合
         _http_server_main(settings)
@@ -208,10 +206,11 @@ else:
 
     # gunicorn が参照する `server_app` を定義
     if not main._slack_settings.is_socket_mode:
-        # HTTPサーバーモードの場合のみ、グローバルな `server_app` を定義
-        server_app = (
-            main.server_app()
-        )  # メソッドを呼び出して FastAPI インスタンスを取得
+        # # HTTPサーバーモードの場合のみ、グローバルな `server_app` を定義
+        # server_app = (
+        #     main.server_app()
+        # )  # メソッドを呼び出して FastAPI インスタンスを取得
+        pass
     else:
         # Gunicorn は HTTP サーバーを期待するので、ソケットモードの場合はエラー
         logger.warning(

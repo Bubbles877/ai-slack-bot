@@ -183,6 +183,7 @@ llm_settings = LLMSettings()
 # if __name__ == "__main__":
 #     try:
 #         main.run()
+#         pass
 #     except KeyboardInterrupt:
 #         logger.info("KeyboardInterrupt: Shutting down...")
 #     except Exception as e:
@@ -190,11 +191,34 @@ llm_settings = LLMSettings()
 #         logger.debug(traceback.format_exc())
 
 if __name__ == "__main__":
+    # python app/main.py で直接実行された場合
     if slack_settings.is_socket_mode:
-        main = Main(settings, slack_settings, llm_settings)
-        asyncio.run(_socket_mode_main(main, slack_settings.app_token))
+        main_instance_for_socket = Main(settings, slack_settings, llm_settings)
+        asyncio.run(
+            _socket_mode_main(main_instance_for_socket, slack_settings.app_token)
+        )
     else:
+        # HTTPサーバーモードで uvicorn を直接実行する場合
         _http_server_main(settings)
 else:
     # Uvicorn や Gunicorn で実行する場合
+    # Uvicorn や Gunicorn などからモジュールとしてインポートされた場合
+    # この main インスタンスが uvicorn.run や gunicorn から参照される
     main = Main(settings, slack_settings, llm_settings)
+
+    # gunicorn が参照する `server_app` を定義
+    if not main._slack_settings.is_socket_mode:
+        # HTTPサーバーモードの場合のみ、グローバルな `server_app` を定義
+        server_app = (
+            main.server_app()
+        )  # メソッドを呼び出して FastAPI インスタンスを取得
+    else:
+        # Gunicorn は HTTP サーバーを期待するので、ソケットモードの場合はエラー
+        logger.warning(
+            "Application is in socket mode. 'server_app' will not be defined. "
+            "Gunicorn should not be used in socket mode."
+        )
+        raise RuntimeError(
+            "Cannot provide 'server_app' for Gunicorn in socket mode. "
+            "Configure the application to run in HTTP mode for Gunicorn."
+        )

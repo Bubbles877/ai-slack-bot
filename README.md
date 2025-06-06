@@ -26,8 +26,7 @@
 
 ### 3.1. Slack App Configuration
 
-Configure your Slack app on the [Slack](https://api.slack.com/) website.  
-(Reference: [Getting Started | Bolt for Python](https://tools.slack.dev/bolt-python/getting-started/))
+Configure your Slack app on the [Slack](https://api.slack.com/) website. (Reference: [Getting Started | Bolt for Python](https://tools.slack.dev/bolt-python/getting-started/))
 
 Subscribe to the following bot events:
 

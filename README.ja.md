@@ -26,8 +26,7 @@
 
 ### 3.1. Slack アプリの構成
 
-[Slack](https://api.slack.com/lang/ja-jp) のサイトで Slack アプリを構成してください。  
-(参考: [Bolt 入門ガイド | Bolt for Python](https://tools.slack.dev/bolt-python/ja-jp/getting-started/))
+[Slack](https://api.slack.com/lang/ja-jp) のサイトで Slack アプリを構成してください。 (参考: [Bolt 入門ガイド | Bolt for Python](https://tools.slack.dev/bolt-python/ja-jp/getting-started/))
 
 以下のボットイベントを購読してください。
 

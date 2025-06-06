@@ -5,11 +5,6 @@ description = "AI Slack Bot"
 authors = ["oha"]
 license = "Apache-2.0"
 readme = "README.md"
-packages = [
-    {include = "app"},
-    {include = "util"},
-]
-include = ["data/**/*"]
 
 [tool.poetry.dependencies]
 python = ">=3.12,<3.14"

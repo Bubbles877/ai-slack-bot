@@ -36,12 +36,14 @@ class Main:
 
         self._resource_loader = ResourceLoader(enable_logging=True)
 
-        self._bot = SlackBot(self._slack_settings, self._chat, enable_logging=True)
+        self._slack_bot = SlackBot(
+            self._slack_settings, self._chat, enable_logging=True
+        )
         self._http_server: Optional[HTTPServer] = None
 
         if not self._slack_settings.is_socket_mode:
             self._http_server = HTTPServer(
-                request_handler=self._bot.request_handler(),
+                request_handler=self._slack_bot.request_handler(),
                 setup_callback=self.setup,
                 cleanup_callback=self.cleanup,
                 enable_logging=True,
@@ -65,7 +67,7 @@ class Main:
         )
         self._llm_chat.configure(llm_instructions)
 
-        await self._bot.setup()
+        await self._slack_bot.setup()
 
         logger.debug("Setup complete")
 
@@ -75,21 +77,13 @@ class Main:
 
         logger.debug("Cleanup complete")
 
-    # def bot(self) -> SlackBot:
-    #     """Slack ボットを取得する
-
-    #     Returns:
-    #         SlackBot: Slack ボット
-    #     """
-    #     return self._bot
-
     def slack_app(self) -> AsyncApp:
         """Slack App を取得する
 
         Returns:
             AsyncApp: Slack App
         """
-        return self._bot
+        return self._slack_bot
 
     def server_app(self) -> Optional[HTTPServer]:
         """サーバーアプリを取得する
@@ -156,8 +150,8 @@ async def _socket_mode_main(main: Main, app_token: Optional[str]) -> None:
         logger.info("Socket mode handler cancelled")
     except KeyboardInterrupt:
         logger.info("Keyboard interrupt")
-    except Exception:
-        logger.error("Socket mode handler error")
+    except Exception as e:
+        logger.error(f"Socket mode handler error: {e}")
         logger.debug(traceback.format_exc())
 
     await handler.close_async()
@@ -168,31 +162,18 @@ def _http_server_main(settings: Settings) -> None:
     logger.info("HTTP server starting...")
 
     uvicorn.run(
-        # app="main:main.server_app",
         app="main:server_app",
         host="0.0.0.0",
         port=settings.port if settings.port else 80,
         reload=settings.is_development,
-        # factory=True,
     )
 
 
 logger.info(f"App main: {__name__=}")
 
-# main: Optional[Main] = None
 settings = Settings()
 slack_settings = SlackSettings()
 llm_settings = LLMSettings()
-
-# if __name__ == "__main__":
-#     try:
-#         main.run()
-#         pass
-#     except KeyboardInterrupt:
-#         logger.info("KeyboardInterrupt: Shutting down...")
-#     except Exception as e:
-#         logger.error(f"Error: {e}")
-#         logger.debug(traceback.format_exc())
 
 if __name__ == "__main__":
     # python app/main.py で実行する場合
@@ -200,10 +181,9 @@ if __name__ == "__main__":
         main = Main(settings, slack_settings, llm_settings)
         asyncio.run(_socket_mode_main(main, slack_settings.app_token))
     else:
-        # HTTPサーバーモードで uvicorn を直接実行する場合
         _http_server_main(settings)
 else:
-    # Uvicorn、Gunicorn からモジュールとしてインポートされて実行する場合
+    # Uvicorn からモジュールとしてインポートされて実行する場合
     if slack_settings.is_socket_mode:
         # HTTP サーバーを動かすのでソケットモードの場合はエラー
         logger.error(
@@ -213,5 +193,5 @@ else:
         raise RuntimeError("Socket mode is not supported in HTTP server mode.")
 
     main = Main(settings, slack_settings, llm_settings)
-    # Uvicorn、Gunicorn が参照する FastAPI インスタンス
+    # Uvicorn が参照する ASGI アプリケーションインスタンス
     server_app = main.server_app()

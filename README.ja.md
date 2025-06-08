@@ -36,6 +36,20 @@
 - message.mpim
 - app_mention
 
+ボットトークンには以下のスコープが必要です。
+
+- channels:history
+- groups:history
+- im:history
+- mpim:history
+- app_mentions:read
+- chat:write
+- reactions:write
+
+アプリレベルトークンには以下のスコープが必要です。
+
+- connections:write
+
 ### 3.2. 環境変数
 
 環境変数の設定が必要です。
@@ -86,6 +100,7 @@
   - ローカルでの開発用途
 - SLACK_APP_TOKEN
   - アプリレベルトークン
+  - ソケットモードで必要
 - SLACK_BOT_TOKEN
   - ボットトークン
 - SLACK_SIGNING_SECRET

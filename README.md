@@ -36,6 +36,20 @@ Subscribe to the following bot events:
 - message.mpim
 - app_mention
 
+The following scopes are required for the bot token:
+
+- channels:history
+- groups:history
+- im:history
+- mpim:history
+- app_mentions:read
+- chat:write
+- reactions:write
+
+The following scopes are required for the app-level token:
+
+- connections:write
+
 ### 3.2. Environment Variables
 
 Environment variables are required.
@@ -86,6 +100,7 @@ Available environment variables:
   - For local development purposes
 - SLACK_APP_TOKEN
   - App-level token
+  - Required for socket mode
 - SLACK_BOT_TOKEN
   - Bot token
 - SLACK_SIGNING_SECRET

@@ -150,11 +150,14 @@ async def _socket_mode_main(main: Main, app_token: Optional[str]) -> None:
 
     handler = AsyncSocketModeHandler(main.slack_app(), app_token)
 
-    # TODO: Ctrl + C で例外吐く
     try:
         await handler.start_async()
-    except Exception as e:
-        logger.error(f"Error: {e}")
+    except asyncio.CancelledError:
+        logger.info("Socket mode handler cancelled")
+    except KeyboardInterrupt:
+        logger.info("Keyboard interrupt")
+    except Exception:
+        logger.error("Socket mode handler error")
         logger.debug(traceback.format_exc())
 
     await handler.close_async()

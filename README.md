@@ -105,6 +105,10 @@ Available environment variables:
   - Bot token
 - SLACK_SIGNING_SECRET
   - Signing secret
+- SLACK_MAX_THREAD_MESSAGES
+  - Maximum number of messages to retrieve from a thread
+  - The most recent messages are prioritized up to the maximum count
+  - The parent message of the thread is always included separately
 
 ### 3.3. Running the App
 

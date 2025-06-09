@@ -221,10 +221,10 @@ class SlackBot(AsyncApp):
         history: list[SlackMessage] = []
 
         try:
-            # TODO: 設定ファイルに出す
-            # 最新 20 件まで取得
             res = await self.client.conversations_replies(
-                channel=channel_id, ts=thread_ts, limit=20
+                channel=channel_id,
+                ts=thread_ts,
+                limit=self._settings.max_thread_messages,
             )
             logger.debug(
                 f"Thread history:\n{json.dumps(res.data, indent=2, ensure_ascii=False)}"

@@ -13,6 +13,7 @@ class SlackSettings(BaseSettings):
     app_token: Optional[str] = None
     bot_token: str
     signing_secret: Optional[str] = None
+    max_thread_messages: int = 15
 
     # 注: 変えたい場合はコンストラクタで "_env_file" などで指定
     model_config = SettingsConfigDict(

@@ -162,21 +162,25 @@ class SlackBot(AsyncApp):
         """
         logger.debug("Handle app mention")
 
+        # TODO(you):
+        #   メンションされた場合のみ応答したい場合は、message イベントを購読せず、
+        #   この app_mention イベント用のメソッドで処理すると効率的
+
     async def _process_message(
-        self, text: str, channel_id: str, thread_ts: str, ts: str, say: AsyncSay
+        self, text: str, channel_id: str, thread_ts: str, message_ts: str, say: AsyncSay
     ) -> None:
         try:
             await self.client.reactions_add(
-                channel=channel_id, name="eyes", timestamp=ts
+                channel=channel_id, name="eyes", timestamp=message_ts
             )
         except Exception as e:
             logger.error(f"Add reaction error: {e}")
 
         history: list[SlackMessage] = []
 
-        if thread_ts != ts:
+        if thread_ts != message_ts:
             # スレッドの場合はメッセージ履歴を取得する
-            history = await self._get_thread_history(channel_id, thread_ts)
+            history = await self._get_thread_history(channel_id, thread_ts, message_ts)
 
         res = ""
 
@@ -216,7 +220,7 @@ class SlackBot(AsyncApp):
         return mentioned_users
 
     async def _get_thread_history(
-        self, channel_id: str, thread_ts: str
+        self, channel_id: str, thread_ts: str, message_ts: str
     ) -> list[SlackMessage]:
         history: list[SlackMessage] = []
 
@@ -224,6 +228,7 @@ class SlackBot(AsyncApp):
             res = await self.client.conversations_replies(
                 channel=channel_id,
                 ts=thread_ts,
+                latest=message_ts,  # イベントで受け取ったメッセージは含めずに履歴を取得する
                 limit=self._settings.max_thread_messages,
             )
             logger.debug(

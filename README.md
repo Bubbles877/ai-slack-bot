@@ -108,9 +108,11 @@ Available environment variables:
 - SLACK_SIGNING_SECRET
   - Signing secret
 - SLACK_MAX_THREAD_MESSAGES
-  - Maximum number of messages to retrieve from a thread
-  - The most recent messages are prioritized up to the maximum count
+  - Maximum number of messages to retrieve within a thread
+  - Excludes message received via message event or app_mention event,  
+    prioritizing the most recent messages up to the maximum count
   - The parent message of the thread is always included separately
+  - The result is "parent message of the thread + retrieved messages + message received via event"
 
 ### 3.3. Running the App
 

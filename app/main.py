@@ -125,12 +125,20 @@ class Main:
 
         for msg in messages:
             role = msg.get("role", "")
-            content = str(msg.get("content", ""))
+            bot_name = msg.get("bot_name", "")
+            content = msg.get("content", "")
+
             match role:
                 case "user":
                     msgs.append(HumanMessage(content=content))
                 case "bot":
-                    msgs.append(AIMessage(content=content))
+                    # msgs.append(AIMessage(content=content))
+                    msgs.append(AIMessage(content=f"[Bot: {bot_name}] {content}"))
+                case "other_bot":
+                    # TODO: 他のボットを含めるかは設定で制御する
+                    msgs.append(HumanMessage(content=f"[Bot: {bot_name}] {content}"))
+                case "other":
+                    pass
                 case _:
                     logger.warning(f"Unknown role: {role}")
 
@@ -161,12 +169,20 @@ async def _socket_mode_main(main: Main, app_token: Optional[str]) -> None:
 def _http_server_main(settings: Settings) -> None:
     logger.info("HTTP server starting...")
 
-    uvicorn.run(
-        app="main:server_app",
-        host="0.0.0.0",
-        port=settings.port if settings.port else 80,
-        reload=settings.is_development,
-    )
+    try:
+        uvicorn.run(
+            app="main:server_app",
+            host="0.0.0.0",
+            port=settings.port if settings.port else 80,
+            reload=settings.is_development,
+        )
+    except asyncio.CancelledError:
+        logger.info("HTTP server cancelled")
+    except KeyboardInterrupt:
+        logger.info("Keyboard interrupt")
+    except Exception as e:
+        logger.error(f"HTTP server error: {e}")
+        logger.debug(traceback.format_exc())
 
 
 logger.info(f"App main: {__name__=}")

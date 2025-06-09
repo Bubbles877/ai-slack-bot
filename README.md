@@ -5,7 +5,7 @@
 ## 1. Overview
 
 - AI Slack Bot
-- Built with [Bolt](https://tools.slack.dev/bolt-python/) and [FastAPI](https://fastapi.tiangolo.com/)
+- Built with [Slack Bolt](https://tools.slack.dev/bolt-python/) and [FastAPI](https://fastapi.tiangolo.com/)
 
 ## 2. Key Features
 

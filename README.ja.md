@@ -5,7 +5,7 @@
 ## 1. Overview
 
 - AI Slack ボット
-- [Bolt](https://tools.slack.dev/bolt-python/ja-jp/)、[FastAPI](https://fastapi.tiangolo.com/ja/) を利用
+- [Slack Bolt](https://tools.slack.dev/bolt-python/ja-jp/)、[FastAPI](https://fastapi.tiangolo.com/ja/) を利用
 
 ## 2. 主な機能
 

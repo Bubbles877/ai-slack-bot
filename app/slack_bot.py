@@ -11,7 +11,8 @@ from util.setting.slack_settings import SlackSettings
 
 
 class SlackMessage(TypedDict):
-    role: Literal["user", "bot"]
+    role: Literal["user", "bot", "other bot", "other"]
+    bot_name: Optional[str]
     content: str
 
 
@@ -49,7 +50,7 @@ class SlackBot(AsyncApp):
 
         self._req_handler = AsyncSlackRequestHandler(self)
 
-        self._bot_id: Optional[str] = None
+        self._bot_user_id: Optional[str] = None
         # 監視対象のスレッド ID を保持するセット
         # app_mention で開始されるか、DM で開始された thread_ts を記録
         # TODO: 複数ワーカーでは共有できない -> Redis などに有効期限付きで登録して共有する
@@ -63,8 +64,8 @@ class SlackBot(AsyncApp):
         logger.debug("Setting up...")
 
         res = await self.client.auth_test()
-        self._bot_id = res.get("user_id", "")
-        logger.debug(f"Bot ID: {self._bot_id}")
+        self._bot_user_id = res.get("user_id", "")
+        logger.debug(f"Bot ID: {self._bot_user_id}")
 
         logger.debug("Setup done.")
 
@@ -83,36 +84,38 @@ class SlackBot(AsyncApp):
             body (dict): リクエストボディ
             say (AsyncSay): メッセージ送信
         """
-        logger.info(f"Handle message:\n{json.dumps(body, indent=2)}")
+        logger.debug(f"Handle message:\n{json.dumps(body, indent=2)}")
         start_time = time.perf_counter()
 
         event: dict = body.get("event", {})
         user_id: str = event.get("user", "")
         bot_id: str = event.get("bot_id", "")
+
+        if bot_id:
+            logger.debug(f"Ignoring bot message (ID: {bot_id})")
+            return
+
+        if not user_id:
+            logger.debug("Ignoring message without user ID")
+            return
+
+        # if bot_id のチェックだけで OK
+        # if user_id == self._bot_user_id:
+        #     # 自分自身からのメンションは来ないと思われるが念のため
+        #     logger.debug(f"Ignoring message from self (ID: {user_id}).")
+        #     return
+
         ts: str = event.get("ts", "")
         thread_ts: str = event.get("thread_ts", ts)
         text: str = event.get("text", "")
         channel_id: str = event.get("channel", "")
         channel_type: str = event.get("channel_type", "")
 
-        if bot_id:
-            logger.info(f"Ignoring bot message (ID: {bot_id}).")
-            return
-
-        if not user_id:
-            logger.info("Ignoring message without user ID.")
-            return
-
-        if user_id == self._bot_id:
-            # 自分自身からのメンションは来ないと思われるが念のため
-            logger.info(f"Ignoring message from self (ID: {user_id}).")
-            return
-
         is_mentioned = False
 
         if blocks := event.get("blocks"):
             mentioned_users = self._extract_mentioned_users(blocks)
-            is_mentioned = self._bot_id in mentioned_users
+            is_mentioned = self._bot_user_id in mentioned_users
 
             # 自分の Bot ID にメンションが無く、他のユーザーにメンションがある場合は無視する
             if not is_mentioned and mentioned_users:
@@ -133,20 +136,20 @@ class SlackBot(AsyncApp):
             )
             return
 
-        logger.info(
-            f"Processing message from user {user_id} in channel {channel_id}"
-            f"{f' (thread: {thread_ts})' if thread_ts != ts else ''}: '{text}'"
-            f" | mentioned: {is_mentioned}, DM: {is_direct_msg}, active_thread: {is_active_thread}"
+        logger.debug(
+            f"Processing message from user {user_id} in channel {channel_id}, thread {thread_ts}"
+            f" (Mentioned: {is_mentioned}, DM: {is_direct_msg}, Active thread: {is_active_thread})\n"
+            f"{text}"
         )
 
         if (is_mentioned or is_direct_msg) and not is_active_thread:
             # 監視スレッドとして登録する
             self.active_threads.add(thread_ts)
-            logger.debug(f"Thread {thread_ts} added to active_threads.")
+            logger.debug(f"Thread {thread_ts} added to active threads")
 
         await self._process_message(text, channel_id, thread_ts, ts, say)
 
-        logger.info(
+        logger.debug(
             f"Handle message done (executed in {time.perf_counter() - start_time:.2f}s)"
         )
 
@@ -157,7 +160,7 @@ class SlackBot(AsyncApp):
             body (dict): リクエストボディ
             say (AsyncSay): メッセージ送信
         """
-        logger.info("Handle app mention")
+        logger.debug("Handle app mention")
 
     async def _process_message(
         self, text: str, channel_id: str, thread_ts: str, ts: str, say: AsyncSay
@@ -218,6 +221,7 @@ class SlackBot(AsyncApp):
         history: list[SlackMessage] = []
 
         try:
+            # TODO: 設定ファイルに出す
             # 最新 20 件まで取得
             res = await self.client.conversations_replies(
                 channel=channel_id, ts=thread_ts, limit=20
@@ -228,14 +232,22 @@ class SlackBot(AsyncApp):
 
             msgs: list[dict] = res.get("messages", [])
             for msg in msgs:
-                user_id = msg.get("user")
-                bot_id = msg.get("bot_id")
-                text = msg.get("text", "")
+                user_id: str = msg.get("user", "")
+                bot_id: str = msg.get("bot_id", "")
+                text: str = msg.get("text", "")
+                bot_profile: dict = msg.get("bot_profile", {})
+                bot_name: Optional[str] = bot_profile.get("name")
 
-                if user_id == self._bot_id or bot_id:
-                    history.append({"role": "bot", "content": text})
+                role: Literal["user", "bot", "other bot", "other"] = "other"
+
+                if user_id == self._bot_user_id:
+                    role = "bot"
+                elif bot_id:
+                    role = "other bot"
                 elif user_id:
-                    history.append({"role": "user", "content": text})
+                    role = "user"
+
+                history.append({"role": role, "bot_name": bot_name, "content": text})
 
             return history
         except Exception as e:

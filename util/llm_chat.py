@@ -76,6 +76,7 @@ class LLMChat:
         logger.debug(f"Input messages: {len(msgs)}")
 
         prompt = ChatPromptTemplate.from_messages(msgs)
+        # prompt.pretty_print()
         chain = prompt | self._llm | StrOutputParser()
 
         result = ""

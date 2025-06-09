@@ -45,7 +45,7 @@ class HTTPServer(FastAPI):
             logger.info("Setting up...")
             await self._setup_callback()
 
-            logger.info("Setup done.")
+            logger.info("Setup done")
 
         yield
 
@@ -53,7 +53,8 @@ class HTTPServer(FastAPI):
         if self._cleanup_callback:
             logger.info("Cleaning up...")
             await self._cleanup_callback()
-            logger.info("Cleanup done.")
+
+            logger.info("Cleanup done")
 
     async def _handle_status(self, req: Request) -> dict:
         """ステータス取得リクエストを処理する

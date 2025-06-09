@@ -52,6 +52,7 @@ class Main:
         llm_utils.enable_logging(enable=True)
 
         if not (llm := llm_utils.create_llm(self._llm_settings)):
+            logger.error("Failed to create LLM")
             raise RuntimeError("Failed to create LLM")
 
         self._llm_chat = LLMChat(
@@ -69,13 +70,13 @@ class Main:
 
         await self._slack_bot.setup()
 
-        logger.debug("Setup complete")
+        logger.debug("Setup done")
 
     async def cleanup(self) -> None:
         """終了処理をする"""
         logger.debug("Cleaning up...")
 
-        logger.debug("Cleanup complete")
+        logger.debug("Cleanup done")
 
     def slack_app(self) -> AsyncApp:
         """Slack App を取得する
@@ -119,8 +120,7 @@ class Main:
         logger.debug(f"(AI) {ai_res}")
         return ai_res
 
-    @staticmethod
-    def _to_llm_messages(messages: list[SlackMessage]) -> list[AnyMessage]:
+    def _to_llm_messages(self, messages: list[SlackMessage]) -> list[AnyMessage]:
         msgs: list[AnyMessage] = []
 
         for msg in messages:
@@ -138,7 +138,7 @@ class Main:
                         )
                     )
                 case "other bot":
-                    if settings.llm_includes_other_bot_messages:
+                    if self._settings.llm_includes_other_bot_messages:
                         msgs.append(
                             HumanMessage(
                                 content=f"[Bot: {bot_name}] {content}",

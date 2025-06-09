@@ -134,15 +134,15 @@ class Main:
                 case "bot":
                     msgs.append(
                         AIMessage(
-                            content=content, additional_kwargs={"bot name": bot_name}
+                            content=content, additional_kwargs={"bot_name": bot_name}
                         )
                     )
-                case "other bot":
+                case "other_bot":
                     if self._settings.llm_includes_other_bot_messages:
                         msgs.append(
                             HumanMessage(
                                 content=f"[Bot: {bot_name}] {content}",
-                                additional_kwargs={"bot name": bot_name},
+                                additional_kwargs={"bot_name": bot_name},
                             )
                         )
                 case "other":

@@ -11,7 +11,7 @@ from util.setting.slack_settings import SlackSettings
 
 
 class SlackMessage(TypedDict):
-    role: Literal["user", "bot", "other bot", "other"]
+    role: Literal["user", "bot", "other_bot", "other"]
     bot_name: Optional[str]
     content: str
 
@@ -67,7 +67,7 @@ class SlackBot(AsyncApp):
         self._bot_user_id = res.get("user_id", "")
         logger.debug(f"Bot ID: {self._bot_user_id}")
 
-        logger.debug("Setup done.")
+        logger.debug("Setup done")
 
     def request_handler(self) -> AsyncSlackRequestHandler:
         """リクエストハンドラー
@@ -167,7 +167,12 @@ class SlackBot(AsyncApp):
         #   この app_mention イベント用のメソッドで処理すると効率的
 
     async def _process_message(
-        self, text: str, channel_id: str, thread_ts: str, message_ts: str, say: AsyncSay
+        self,
+        message: str,
+        channel_id: str,
+        thread_ts: str,
+        message_ts: str,
+        say: AsyncSay,
     ) -> None:
         try:
             await self.client.reactions_add(
@@ -185,7 +190,7 @@ class SlackBot(AsyncApp):
         res = ""
 
         try:
-            res = await self._chat_callback(text, history)
+            res = await self._chat_callback(message, history)
             logger.debug(f"Response: {res}")
 
             if not res:
@@ -243,12 +248,12 @@ class SlackBot(AsyncApp):
                 bot_profile: dict = msg.get("bot_profile", {})
                 bot_name: Optional[str] = bot_profile.get("name")
 
-                role: Literal["user", "bot", "other bot", "other"] = "other"
+                role: Literal["user", "bot", "other_bot", "other"] = "other"
 
                 if user_id == self._bot_user_id:
                     role = "bot"
                 elif bot_id:
-                    role = "other bot"
+                    role = "other_bot"
                 elif user_id:
                     role = "user"
 

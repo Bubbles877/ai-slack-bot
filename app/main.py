@@ -193,19 +193,19 @@ def _http_server_main(settings: Settings) -> None:
 
 logger.info(f"App main: {__name__=}")
 
-settings = Settings()
-slack_settings = SlackSettings()
-llm_settings = LLMSettings()
-
 if __name__ == "__main__":
     # python app/main.py で実行する場合
+    settings = Settings()
+    slack_settings = SlackSettings()
     if slack_settings.is_socket_mode:
+        llm_settings = LLMSettings()
         main = Main(settings, slack_settings, llm_settings)
         asyncio.run(_socket_mode_main(main, slack_settings.app_token))
     else:
         _http_server_main(settings)
 else:
     # Uvicorn からモジュールとしてインポートされて実行する場合
+    slack_settings = SlackSettings()
     if slack_settings.is_socket_mode:
         # HTTP サーバーを動かすのでソケットモードの場合はエラー
         logger.error(
@@ -214,6 +214,8 @@ else:
         )
         raise RuntimeError("Socket mode is not supported in HTTP server mode.")
 
+    settings = Settings()
+    llm_settings = LLMSettings()
     main = Main(settings, slack_settings, llm_settings)
     # Uvicorn が参照する ASGI アプリケーションインスタンス
     server_app = main.server_app()

@@ -72,6 +72,8 @@
 - LLM_MAX_MESSAGES
   - LLM に渡す会話履歴の最大数 (<0: 無制限)
   - より新しいメッセージを優先に最大数まで渡す
+- LLM_INCLUDES_OTHER_BOT_MESSAGES
+  - 他の Slack ボットのメッセージを LLM に渡すかどうか
 
 #### 3.2.2. LLM 関連
 

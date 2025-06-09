@@ -132,11 +132,19 @@ class Main:
                 case "user":
                     msgs.append(HumanMessage(content=content))
                 case "bot":
-                    # msgs.append(AIMessage(content=content))
-                    msgs.append(AIMessage(content=f"[Bot: {bot_name}] {content}"))
-                case "other_bot":
-                    # TODO: 他のボットを含めるかは設定で制御する
-                    msgs.append(HumanMessage(content=f"[Bot: {bot_name}] {content}"))
+                    msgs.append(
+                        AIMessage(
+                            content=content, additional_kwargs={"bot name": bot_name}
+                        )
+                    )
+                case "other bot":
+                    if settings.llm_includes_other_bot_messages:
+                        msgs.append(
+                            HumanMessage(
+                                content=f"[Bot: {bot_name}] {content}",
+                                additional_kwargs={"bot name": bot_name},
+                            )
+                        )
                 case "other":
                     pass
                 case _:

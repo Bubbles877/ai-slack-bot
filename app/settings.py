@@ -16,6 +16,7 @@ class Settings(BaseSettings):
 
     llm_instruction_file_path: Optional[str] = None
     llm_max_messages: int = -1
+    llm_includes_other_bot_messages: bool = False
 
     model_config = SettingsConfigDict(
         extra="ignore",

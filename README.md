@@ -72,6 +72,8 @@ Available environment variables:
 - LLM_MAX_MESSAGES
   - Maximum number of messages to include in the conversation history passed to the LLM (<0: unlimited)
   - The most recent messages are prioritized up to the maximum count
+- LLM_INCLUDES_OTHER_BOT_MESSAGES
+  - Whether to pass messages from other Slack bots to the LLM
 
 #### 3.2.2. LLM Related
 

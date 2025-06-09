@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     is_development: bool = False
 
-    port: Optional[int] = None
+    port: int = 8000
 
     llm_instruction_file_path: Optional[str] = None
     llm_max_messages: int = -1

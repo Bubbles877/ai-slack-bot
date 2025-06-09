@@ -181,7 +181,7 @@ def _http_server_main(settings: Settings) -> None:
         uvicorn.run(
             app="main:server_app",
             host="0.0.0.0",
-            port=settings.port if settings.port else 80,
+            port=settings.port,
             reload=settings.is_development,
         )
     except KeyboardInterrupt:

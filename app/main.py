@@ -184,8 +184,6 @@ def _http_server_main(settings: Settings) -> None:
             port=settings.port if settings.port else 80,
             reload=settings.is_development,
         )
-    except asyncio.CancelledError:
-        logger.info("HTTP server cancelled")
     except KeyboardInterrupt:
         logger.info("Keyboard interrupt")
     except Exception as e:

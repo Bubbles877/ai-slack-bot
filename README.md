@@ -149,6 +149,14 @@ gunicorn "app.main:server_app" \
   --error-logfile -
 ```
 
-## 4. Repository
+## 4. Dependencies
+
+- [python-utilities/llm_chat at main · Bubbles877/python-utilities](https://github.com/Bubbles877/python-utilities/tree/main/llm_chat)
+
+## 5. Supported Environments
+
+Please see [pyproject.toml](./pyproject.toml).
+
+## 6. Repository
 
 - [Bubbles877/ai-slack-bot](https://github.com/Bubbles877/ai-slack-bot)

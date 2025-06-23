@@ -149,6 +149,14 @@ gunicorn "app.main:server_app" \
   --error-logfile -
 ```
 
-## 4. リポジトリ
+## 4. 依存モジュール
+
+- [python-utilities/llm_chat at main · Bubbles877/python-utilities](https://github.com/Bubbles877/python-utilities/tree/main/llm_chat)
+
+## 5. 対応環境
+
+[pyproject.toml](./pyproject.toml) を参照してください。
+
+## 6. リポジトリ
 
 - [Bubbles877/ai-slack-bot](https://github.com/Bubbles877/ai-slack-bot)

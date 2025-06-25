@@ -79,18 +79,18 @@ class LLMChat:
         # prompt.pretty_print()
         chain = prompt | self._llm | StrOutputParser()
 
-        result = ""
+        res = ""
 
         try:
             start_time = time.perf_counter()
-            result = chain.invoke({})
+            res = chain.invoke({})
             logger.debug(
                 f"LLM invocation time: {(time.perf_counter() - start_time):.2f}s"
             )
         except Exception as e:
             logger.error(f"LLM invocation failed: {e}")
 
-        return result
+        return res
 
     async def ainvoke(
         self, message: Optional[str] = None, history: Optional[list[AnyMessage]] = None

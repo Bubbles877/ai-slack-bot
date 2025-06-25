@@ -42,6 +42,7 @@ class LLMChat:
         if max_messages >= 0:
             # システムメッセージ含めて max_messages 件残す
             self._msgs_trimmer = trim_messages(
+                # token_counter に len を指定して、メッセージ数をトークン数として扱う
                 max_tokens=max_messages,
                 token_counter=len,
                 strategy="last",

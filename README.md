@@ -20,7 +20,7 @@
 ## 3. Usage
 
 1. Configure the Slack app on the Slack website
-2. Set up environment variables
+2. Set up the required environment variables
 3. Run the app
 4. Mention the Slack bot in your Slack app to start a conversation
 
@@ -64,7 +64,7 @@ Available environment variables:
 - LOG_LEVEL
   - Log level (`DEBUG`, `INFO`, `WARNING`, `ERROR`)
 - IS_DEVELOPMENT
-  - Whether to run in development mode
+  - Whether to run in development mode (`True`, `False`)
 - PORT
   - Port number
 - LLM_INSTRUCTION_FILE_PATH
@@ -80,7 +80,7 @@ Available environment variables:
 - LLM_PROVIDER
   - LLM provider (`azure`, `openai`)
 - LLM_NAME
-  - Name of the LLM (e.g. gpt-4.1-mini)
+  - LLM model name (e.g. gpt-4.1-mini)
 - LLM_DEPLOY_NAME
   - LLM deployment name (e.g. gpt-4.1-mini-dev-001)
   - Required for Azure, not for OpenAI
@@ -93,12 +93,12 @@ Available environment variables:
   - LLM API version (e.g. 2025-01-01-preview)
   - Required for Azure, not for OpenAI
 - LLM_TEMPERATURE
-  - Sampling temperature of the LLM (randomness and creativity of the generated output) (0.0-1.0)
+  - Diversity of LLM Outputs (0.0–1.0)
 
 #### 3.2.3. Slack Related
 
 - SLACK_IS_SOCKET_MODE
-  - Whether to run in socket mode
+  - Whether to run in socket mode (`True`, `False`)
   - For local development purposes
 - SLACK_APP_TOKEN
   - App-level token
@@ -149,14 +149,15 @@ gunicorn "app.main:server_app" \
   --error-logfile -
 ```
 
-## 4. Dependencies
-
-- [python-utilities/llm_chat at main · Bubbles877/python-utilities](https://github.com/Bubbles877/python-utilities/tree/main/llm_chat)
-
-## 5. Supported Environments
+## 4. Dependencies & Verified Versions
 
 Please see [pyproject.toml](./pyproject.toml).
 
-## 6. Repository
+We also use the following:
+
+- [python-utilities/llm_chat at main · Bubbles877/python-utilities](https://github.com/Bubbles877/python-utilities/tree/main/llm_chat)
+- [python-utilities/env_settings at main · Bubbles877/python-utilities](https://github.com/Bubbles877/python-utilities/tree/main/env_settings)
+
+## 5. Repository
 
 - [Bubbles877/ai-slack-bot](https://github.com/Bubbles877/ai-slack-bot)

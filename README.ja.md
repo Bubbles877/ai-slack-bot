@@ -54,7 +54,7 @@
 
 環境変数の設定が必要です。
 
-ローカル環境ではプロジェクトのルートに`.env`を作成して環境変数を設定してください。  
+ローカル環境ではプロジェクトのルートに `.env` を作成して環境変数を設定してください。  
 [.env.example](./.env.example) がテンプレートです。
 
 以下の環境変数があります。
@@ -64,7 +64,7 @@
 - LOG_LEVEL
   - ログレベル (`DEBUG`, `INFO`, `WARNING`, `ERROR`)
 - IS_DEVELOPMENT
-  - 開発モードで実行するかどうか
+  - 開発モードで実行するかどうか (`True`, `False`)
 - PORT
   - ポート番号
 - LLM_INSTRUCTION_FILE_PATH
@@ -80,7 +80,7 @@
 - LLM_PROVIDER
   - LLM プロバイダ (`azure`, `openai`)
 - LLM_NAME
-  - LLM 名 (e.g. gpt-4.1-mini)
+  - LLM のモデル名 (e.g. gpt-4.1-mini)
 - LLM_DEPLOY_NAME
   - LLM デプロイ名 (e.g. gpt-4.1-mini-dev-001)
   - Azure: 要, OpenAI: 不
@@ -93,12 +93,12 @@
   - LLM API のバージョン (e.g. 2025-01-01-preview)
   - Azure: 要, OpenAI: 不
 - LLM_TEMPERATURE
-  - LLM の温度 (生成する出力のランダム性、創造性) (0.0-1.0)
+  - LLM の出力の多様性 (0.0-1.0)
 
 #### 3.2.3. Slack 関連
 
 - SLACK_IS_SOCKET_MODE
-  - ソケットモードで実行するかどうか
+  - ソケットモードで実行するかどうか (`True`, `False`)
   - ローカルでの開発用途
 - SLACK_APP_TOKEN
   - アプリレベルトークン
@@ -149,14 +149,15 @@ gunicorn "app.main:server_app" \
   --error-logfile -
 ```
 
-## 4. 依存モジュール
-
-- [python-utilities/llm_chat at main · Bubbles877/python-utilities](https://github.com/Bubbles877/python-utilities/tree/main/llm_chat)
-
-## 5. 対応環境
+## 4. 依存関係 & 動作確認済みバージョン
 
 [pyproject.toml](./pyproject.toml) を参照してください。
 
-## 6. リポジトリ
+また、以下を利用しています。
+
+- [python-utilities/llm_chat at main · Bubbles877/python-utilities](https://github.com/Bubbles877/python-utilities/tree/main/llm_chat)
+- [python-utilities/env_settings at main · Bubbles877/python-utilities](https://github.com/Bubbles877/python-utilities/tree/main/env_settings)
+
+## 5. リポジトリ
 
 - [Bubbles877/ai-slack-bot](https://github.com/Bubbles877/ai-slack-bot)

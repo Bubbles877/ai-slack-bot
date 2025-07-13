@@ -59,7 +59,7 @@ class LLMChat:
             instructions (str): LLM への指示 (システムプロンプト)
         """
         self._instructions = instructions
-        logger.debug(f"Instructions: {self._instructions}")
+        logger.debug(f"Instructions:\n{self._instructions}")
 
     def invoke(
         self, message: Optional[str] = None, history: Optional[list[AnyMessage]] = None

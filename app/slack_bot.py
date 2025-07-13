@@ -99,12 +99,6 @@ class SlackBot(AsyncApp):
             logger.debug("Ignoring message without user ID")
             return
 
-        # if bot_id のチェックだけで OK
-        # if user_id == self._bot_user_id:
-        #     # 自分自身からのメンションは来ないと思われるが念のため
-        #     logger.debug(f"Ignoring message from self (ID: {user_id}).")
-        #     return
-
         ts: str = event.get("ts", "")
         thread_ts: str = event.get("thread_ts", ts)
         text: str = event.get("text", "")

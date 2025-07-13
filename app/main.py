@@ -1,3 +1,5 @@
+# pyright: reportCallIssue=false
+
 import asyncio
 import sys
 import traceback

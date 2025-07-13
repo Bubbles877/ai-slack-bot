@@ -3,8 +3,8 @@ import time
 import traceback
 from typing import Awaitable, Callable, Literal, Optional, TypedDict
 
-import redis.asyncio as redis
 from loguru import logger
+from redis.asyncio import Redis
 from slack_bolt.adapter.fastapi.async_handler import AsyncSlackRequestHandler
 from slack_bolt.async_app import AsyncApp, AsyncSay
 
@@ -24,7 +24,7 @@ class SlackBot(AsyncApp):
         self,
         settings: SlackSettings,
         chat_callback: Callable[[str, Optional[list[SlackMessage]]], Awaitable[str]],
-        redis_client: Optional[redis.Redis] = None,
+        redis_client: Optional[Redis] = None,
         enable_logging: bool = False,
     ):
         """初期化
@@ -32,7 +32,7 @@ class SlackBot(AsyncApp):
         Args:
             settings (SlackSettings): Slack 設定
             chat_callback (Callable[[str, Optional[list[SlackMessage]]], Awaitable[str]]): 会話のコールバック
-            redis_client (Optional[redis.Redis], optional): Redis クライアント, Defaults to None.
+            redis_client (Optional[Redis], optional): Redis クライアント, Defaults to None.
             enable_logging (bool, optional): ログ出力を有効にするかどうか, Defaults to False.
         """
         super().__init__(

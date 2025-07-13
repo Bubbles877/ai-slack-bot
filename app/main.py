@@ -5,10 +5,10 @@ import sys
 import traceback
 from typing import Optional
 
-import redis.asyncio as redis
 import uvicorn
 from langchain_core.messages import AIMessage, AnyMessage, HumanMessage
 from loguru import logger
+from redis.asyncio import Redis
 from slack_bolt.adapter.socket_mode.async_handler import AsyncSocketModeHandler
 from slack_bolt.async_app import AsyncApp
 
@@ -40,7 +40,7 @@ class Main:
         self._resource_loader = ResourceLoader(enable_logging=True)
 
         redis_client = (
-            redis.from_url(self._settings.redis_url)
+            Redis.from_url(self._settings.redis_url)
             if self._settings.redis_url
             else None
         )

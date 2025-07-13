@@ -24,13 +24,15 @@ class SlackBot(AsyncApp):
         self,
         settings: SlackSettings,
         chat_callback: Callable[[str, Optional[list[SlackMessage]]], Awaitable[str]],
+        redis_client: Optional[redis.Redis] = None,
         enable_logging: bool = False,
     ):
         """初期化
 
         Args:
-            slack_settings (SlackSettings): Slack 設定
+            settings (SlackSettings): Slack 設定
             chat_callback (Callable[[str, Optional[list[SlackMessage]]], Awaitable[str]]): 会話のコールバック
+            redis_client (Optional[redis.Redis], optional): Redis クライアント, Defaults to None.
             enable_logging (bool, optional): ログ出力を有効にするかどうか, Defaults to False.
         """
         super().__init__(
@@ -44,6 +46,7 @@ class SlackBot(AsyncApp):
 
         self._settings = settings
         self._chat_callback = chat_callback
+        self._redis_client = redis_client
 
         logger.debug(
             f"Settings:\n{self._settings.model_dump_json(indent=2, exclude={'app_token', 'bot_token', 'signing_secret'})}"
@@ -56,11 +59,14 @@ class SlackBot(AsyncApp):
         # 監視対象のスレッドを管理する
         # メンションされるか、ダイレクトメッセージの場合に thread_ts を記録する
         # 複数ワーカー間で共有するため Redis を利用する
-        self._redis_client = redis.from_url(
-            getattr(self._settings, "redis_url", "redis://localhost:6379/0")
-        )
         self._active_thread_prefix = "slack_bot:active_thread:"
         self._thread_ttl = 3600  # 1 時間の有効期限
+
+        if self._redis_client is None:
+            logger.info(
+                "Redis client is not provided, using in-memory set for active threads"
+            )
+            self._active_threads: set[str] = set()
 
         self.event("message")(self._handle_message)
         self.event("app_mention")(self._handle_app_mention)
@@ -266,16 +272,22 @@ class SlackBot(AsyncApp):
             return history
 
     async def _is_active_thread(self, thread_ts: str) -> bool:
-        try:
-            key = f"{self._active_thread_prefix}{thread_ts}"
-            return await self._redis_client.exists(key) == 1
-        except Exception as e:
-            logger.error(f"Error checking active thread: {e}")
-            return False
+        if self._redis_client:
+            try:
+                key = f"{self._active_thread_prefix}{thread_ts}"
+                return await self._redis_client.exists(key) == 1
+            except Exception as e:
+                logger.error(f"Error checking active thread: {e}")
+                return False
+        else:
+            return thread_ts in self._active_threads
 
     async def _add_active_thread(self, thread_ts: str) -> None:
-        try:
-            key = f"{self._active_thread_prefix}{thread_ts}"
-            await self._redis_client.setex(key, self._thread_ttl, "1")
-        except Exception as e:
-            logger.error(f"Error adding active thread: {e}")
+        if self._redis_client:
+            try:
+                key = f"{self._active_thread_prefix}{thread_ts}"
+                await self._redis_client.setex(key, self._thread_ttl, "1")
+            except Exception as e:
+                logger.error(f"Error adding active thread: {e}")
+        else:
+            self._active_threads.add(thread_ts)

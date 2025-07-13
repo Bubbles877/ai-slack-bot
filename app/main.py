@@ -5,6 +5,7 @@ import sys
 import traceback
 from typing import Optional
 
+import redis.asyncio as redis
 import uvicorn
 from langchain_core.messages import AIMessage, AnyMessage, HumanMessage
 from loguru import logger
@@ -38,8 +39,16 @@ class Main:
 
         self._resource_loader = ResourceLoader(enable_logging=True)
 
+        redis_client = (
+            redis.from_url(self._settings.redis_url)
+            if self._settings.redis_url
+            else None
+        )
         self._slack_bot = SlackBot(
-            self._slack_settings, self._chat, enable_logging=True
+            self._slack_settings,
+            self._chat,
+            redis_client=redis_client,
+            enable_logging=True,
         )
         self._http_server: Optional[HTTPServer] = None
 

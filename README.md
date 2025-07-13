@@ -76,6 +76,8 @@ Available environment variables:
   - Whether to pass messages from other Slack bots to the LLM
 - REDIS_URL
   - Redis URL (e.g. `redis://localhost:6379/0`)
+  - For a single worker, it works correctly with no configuration
+  - For multiple workers, Redis is required to share Slack information across workers
 
 #### 3.2.2. LLM Related
 

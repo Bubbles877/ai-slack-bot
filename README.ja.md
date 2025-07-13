@@ -76,6 +76,8 @@
   - 他の Slack ボットのメッセージを LLM に渡すかどうか
 - REDIS_URL
   - Redis の URL (e.g. `redis://localhost:6379/0`)
+  - 1 ワーカーの場合は設定しなくて正しく動きます
+  - 複数ワーカーの場合は Slack の情報を共有するために Redis が必要になります
 
 #### 3.2.2. LLM 関連
 

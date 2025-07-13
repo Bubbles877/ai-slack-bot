@@ -59,7 +59,7 @@ class SlackBot(AsyncApp):
         self._redis_client = redis.from_url(
             getattr(self._settings, "redis_url", "redis://localhost:6379/0")
         )
-        self._active_threads_key = "slack_bot:active_threads"
+        self._active_thread_prefix = "slack_bot:active_thread:"
         self._thread_ttl = 3600  # 1 時間の有効期限
 
         self.event("message")(self._handle_message)
@@ -267,16 +267,15 @@ class SlackBot(AsyncApp):
 
     async def _is_active_thread(self, thread_ts: str) -> bool:
         try:
-            return await self._redis_client.sismember(
-                self._active_threads_key, thread_ts
-            )
+            key = f"{self._active_thread_prefix}{thread_ts}"
+            return await self._redis_client.exists(key) == 1
         except Exception as e:
             logger.error(f"Error checking active thread: {e}")
             return False
 
     async def _add_active_thread(self, thread_ts: str) -> None:
         try:
-            await self._redis_client.sadd(self._active_threads_key, thread_ts)
-            await self._redis_client.expire(self._active_threads_key, self._thread_ttl)
+            key = f"{self._active_thread_prefix}{thread_ts}"
+            await self._redis_client.setex(key, self._thread_ttl, "1")
         except Exception as e:
             logger.error(f"Error adding active thread: {e}")

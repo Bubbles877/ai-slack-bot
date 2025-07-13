@@ -14,7 +14,7 @@ class Settings(BaseSettings):
 
     port: int = 8000
 
-    llm_instruction_file_path: Optional[str] = None
+    llm_instructions_file_path: Optional[str] = None
     llm_max_messages: int = -1
     llm_includes_other_bot_messages: bool = False
 

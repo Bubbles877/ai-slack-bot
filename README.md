@@ -67,8 +67,8 @@ Available environment variables:
   - Whether to run in development mode (`True`, `False`)
 - PORT
   - Port number
-- LLM_INSTRUCTION_FILE_PATH
-  - File path for the system prompt file used as instructions for the LLM (e.g. `data/llm_instruction.txt`)
+- LLM_INSTRUCTIONS_FILE_PATH
+  - File path for the system prompt file used as instructions for the LLM (e.g. `data/llm_instructions.txt`)
 - LLM_MAX_MESSAGES
   - Maximum number of messages to include in the conversation history passed to the LLM (<0: unlimited)
   - The most recent messages are prioritized up to the maximum count

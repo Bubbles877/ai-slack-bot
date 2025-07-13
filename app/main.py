@@ -64,7 +64,7 @@ class Main:
         logger.debug("Setting up...")
 
         llm_instructions = await self._resource_loader.load_plane_text(
-            self._settings.llm_instruction_file_path
+            self._settings.llm_instructions_file_path
         )
         self._llm_chat.configure(llm_instructions)
 
@@ -111,6 +111,7 @@ class Main:
         self, user_message: str, history: Optional[list[SlackMessage]] = None
     ) -> str:
         logger.debug(f"(User) {user_message}")
+
         hist: Optional[list[AnyMessage]] = None
 
         if history:

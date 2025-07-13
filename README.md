@@ -74,6 +74,8 @@ Available environment variables:
   - The most recent messages are prioritized up to the maximum count
 - LLM_INCLUDES_OTHER_BOT_MESSAGES
   - Whether to pass messages from other Slack bots to the LLM
+- REDIS_URL
+  - Redis URL (e.g. `redis://localhost:6379/0`)
 
 #### 3.2.2. LLM Related
 

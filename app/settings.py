@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     llm_max_messages: int = -1
     llm_includes_other_bot_messages: bool = False
 
+    redis_url: str = "redis://localhost:6379/0"
+
     model_config = SettingsConfigDict(
         extra="ignore",
         env_file=".env",

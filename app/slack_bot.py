@@ -3,6 +3,7 @@ import time
 import traceback
 from typing import Awaitable, Callable, Literal, Optional, TypedDict
 
+import redis.asyncio as redis
 from loguru import logger
 from slack_bolt.adapter.fastapi.async_handler import AsyncSlackRequestHandler
 from slack_bolt.async_app import AsyncApp, AsyncSay
@@ -51,10 +52,15 @@ class SlackBot(AsyncApp):
         self._req_handler = AsyncSlackRequestHandler(self)
 
         self._bot_user_id: Optional[str] = None
-        # 監視対象のスレッド ID を保持するセット
-        # app_mention で開始されるか、DM で開始された thread_ts を記録
-        # TODO: 複数ワーカーでは共有できない -> Redis などに有効期限付きで登録して共有する
-        self.active_threads: set[str] = set()
+
+        # 監視対象のスレッドを管理する
+        # メンションされるか、ダイレクトメッセージの場合に thread_ts を記録する
+        # 複数ワーカー間で共有するため Redis を利用する
+        self._redis_client = redis.from_url(
+            getattr(self._settings, "redis_url", "redis://localhost:6379/0")
+        )
+        self._active_threads_key = "slack_bot:active_threads"
+        self._thread_ttl = 3600  # 1 時間の有効期限
 
         self.event("message")(self._handle_message)
         self.event("app_mention")(self._handle_app_mention)
@@ -120,7 +126,7 @@ class SlackBot(AsyncApp):
                 return
 
         is_direct_msg = channel_type == "im"
-        is_active_thread = thread_ts in self.active_threads
+        is_active_thread = await self._is_active_thread(thread_ts)
         should_process = is_mentioned or is_direct_msg or is_active_thread
 
         if not should_process:
@@ -138,7 +144,7 @@ class SlackBot(AsyncApp):
 
         if (is_mentioned or is_direct_msg) and not is_active_thread:
             # 監視スレッドとして登録する
-            self.active_threads.add(thread_ts)
+            await self._add_active_thread(thread_ts)
             logger.debug(f"Thread {thread_ts} added to active threads")
 
         await self._process_message(text, channel_id, thread_ts, ts, say)
@@ -258,3 +264,19 @@ class SlackBot(AsyncApp):
             logger.error(f"Error getting thread history: {e}")
             logger.debug(traceback.format_exc())
             return history
+
+    async def _is_active_thread(self, thread_ts: str) -> bool:
+        try:
+            return await self._redis_client.sismember(
+                self._active_threads_key, thread_ts
+            )
+        except Exception as e:
+            logger.error(f"Error checking active thread: {e}")
+            return False
+
+    async def _add_active_thread(self, thread_ts: str) -> None:
+        try:
+            await self._redis_client.sadd(self._active_threads_key, thread_ts)
+            await self._redis_client.expire(self._active_threads_key, self._thread_ttl)
+        except Exception as e:
+            logger.error(f"Error adding active thread: {e}")

@@ -74,6 +74,8 @@
   - より新しいメッセージを優先に最大数まで渡す
 - LLM_INCLUDES_OTHER_BOT_MESSAGES
   - 他の Slack ボットのメッセージを LLM に渡すかどうか
+- REDIS_URL
+  - Redis の URL (e.g. `redis://localhost:6379/0`)
 
 #### 3.2.2. LLM 関連
 

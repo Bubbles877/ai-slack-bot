@@ -11,11 +11,13 @@
 
 - Slack bot using APIs from OpenAI and Azure OpenAI Service
   - Useful to implement additional features like RAG for specific domains, such as business use
-- Feature to set the system prompt
-- Feature to set the maximum number of conversation history entries to pass to the LLM
-  - Useful when model performance degrades with longer contexts
 - HTTP server functionality using FastAPI, Uvicorn, and Gunicorn
   - Enables practical operation in high-load environments
+- Share information between multiple workers using Redis
+  - Enables practical operation with scalability in mind
+- Set the maximum number of conversation-history entries to pass to the LLM
+  - Useful when model performance degrades with longer contexts
+- Set the system prompt
 
 ## 3. Usage
 

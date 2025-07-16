@@ -35,7 +35,9 @@ class Main:
 
         self._setup_logger(self._settings.log_level)
 
-        logger.debug(f"Settings:\n{self._settings.model_dump_json(indent=2)}")
+        logger.debug(
+            f"Settings:\n{self._settings.model_dump_json(indent=2, exclude={'redis_url'})}"
+        )
 
         self._resource_loader = ResourceLoader(enable_logging=True)
 

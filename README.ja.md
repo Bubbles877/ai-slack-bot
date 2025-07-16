@@ -166,4 +166,4 @@ gunicorn "app.main:server_app" \
 
 ## 5. リポジトリ
 
-- [Bubbles877/ai-slack-bot](https://github.com/Bubbles877/ai-slack-bot)
+- [Bubbles877/ai-slack-bot: AI Slack Bot / AI Slack ボット](https://github.com/Bubbles877/ai-slack-bot)

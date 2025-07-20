@@ -56,7 +56,7 @@ class HTTPServer(FastAPI):
 
             logger.info("Cleanup done")
 
-    async def _handle_status(self, req: Request) -> dict:
+    async def _handle_status(self, request: Request) -> dict:
         """ステータス取得リクエストを処理する
 
         Args:
@@ -66,13 +66,15 @@ class HTTPServer(FastAPI):
             dict: ステータス
         """
         logger.info("status")
-        logger.info(f"Client host: {req.client.host if req.client else 'Unknown'}")
-        logger.info(f"Request headers: {req.headers}")
-        logger.info(f"Path parameters: {req.path_params}")
-        logger.info(f"Query parameters: {req.query_params}")
+        logger.info(
+            f"Client host: {request.client.host if request.client else 'Unknown'}"
+        )
+        logger.info(f"Request headers: {request.headers}")
+        logger.info(f"Path parameters: {request.path_params}")
+        logger.info(f"Query parameters: {request.query_params}")
         return {"status": "healthy"}
 
-    async def _handle_events(self, req: Request) -> Response:
+    async def _handle_events(self, request: Request) -> Response:
         """イベントを処理する
 
         Args:
@@ -81,4 +83,4 @@ class HTTPServer(FastAPI):
         Returns:
             Response: レスポンス
         """
-        return await self._req_handler.handle(req)
+        return await self._req_handler.handle(request)

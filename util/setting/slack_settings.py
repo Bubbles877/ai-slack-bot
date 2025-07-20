@@ -17,8 +17,5 @@ class SlackSettings(BaseSettings):
 
     # 注: 変えたい場合はコンストラクタで "_env_file" などで指定
     model_config = SettingsConfigDict(
-        extra="ignore",
-        env_prefix="SLACK_",
-        env_file=".env",
-        env_file_encoding="utf-8",
+        extra="ignore", env_prefix="SLACK_", env_file=".env", env_file_encoding="utf-8"
     )

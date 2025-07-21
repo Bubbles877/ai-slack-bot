@@ -135,16 +135,16 @@ poetry run python app/main.py
 python app/main.py
 ```
 
-[Uvicorn](https://www.uvicorn.org/) のコマンドを利用する場合は、例えば以下のようにして実行できます。
+[Uvicorn](https://www.uvicorn.org/) のコマンドを利用する場合は、例えば以下のように実行できます。
 
 ```sh
 .venv/Scripts/activate
-uvicorn app.main:server_app --port 3000 --reload
+uvicorn app.main:server_app --port 8000 --reload
 ```
 
-#### 3.3.2. サーバー環境での実行
+#### 3.3.2. 本番のサーバー環境での実行
 
-[Gunicorn](https://docs.gunicorn.org/en/latest/run.html) を利用して、例えば以下のようにして実行できます。
+[Gunicorn](https://docs.gunicorn.org/en/latest/run.html) を利用して、例えば以下のように実行できます。
 
 ```sh
 gunicorn "app.main:server_app" \

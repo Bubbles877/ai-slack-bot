@@ -181,6 +181,7 @@ class SlackBot(AsyncApp):
         say: AsyncSay,
     ) -> None:
         try:
+            # 応答に時間が掛かることを想定し、先ず即時にリアクションだけする
             await self.client.reactions_add(
                 channel=channel_id, name="eyes", timestamp=message_ts
             )

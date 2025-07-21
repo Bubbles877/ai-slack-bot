@@ -59,7 +59,7 @@ class SlackBot(AsyncApp):
         # 監視対象のスレッドを管理する
         # メンションされるか、ダイレクトメッセージの場合に thread_ts を記録する
         # 複数ワーカー間で共有するため Redis を利用する
-        self._active_thread_prefix = "slack_bot:active_thread:"
+        self._active_thread_key_prefix = "slack_bot:active_thread:"
         self._thread_ttl = 3600  # 1 時間の有効期限
 
         if self._redis_client is None:
@@ -271,24 +271,24 @@ class SlackBot(AsyncApp):
             logger.debug(traceback.format_exc())
             return history
 
-    async def _is_active_thread(self, thread_ts: str) -> bool:
-        if self._redis_client is None:
-            return thread_ts in self._active_threads
-
-        try:
-            key = f"{self._active_thread_prefix}{thread_ts}"
-            return await self._redis_client.exists(key) == 1
-        except Exception as e:
-            logger.error(f"Error checking active thread: {e}")
-            return False
-
     async def _add_active_thread(self, thread_ts: str) -> None:
         if self._redis_client is None:
             self._active_threads.add(thread_ts)
             return
 
         try:
-            key = f"{self._active_thread_prefix}{thread_ts}"
+            key = f"{self._active_thread_key_prefix}{thread_ts}"
             await self._redis_client.setex(key, self._thread_ttl, "1")
         except Exception as e:
             logger.error(f"Error adding active thread: {e}")
+
+    async def _is_active_thread(self, thread_ts: str) -> bool:
+        if self._redis_client is None:
+            return thread_ts in self._active_threads
+
+        try:
+            key = f"{self._active_thread_key_prefix}{thread_ts}"
+            return await self._redis_client.exists(key) == 1
+        except Exception as e:
+            logger.error(f"Error checking active thread: {e}")
+            return False

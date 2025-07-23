@@ -167,3 +167,7 @@ gunicorn "app.main:server_app" \
 ## 5. リポジトリ
 
 - [Bubbles877/ai-slack-bot: AI Slack Bot / AI Slack ボット](https://github.com/Bubbles877/ai-slack-bot)
+
+## 6. 関連・参考
+
+- [🤖 Slack × FastAPI で作る！ 社内 AI アシスタント基盤](https://zenn.dev/bubbles/articles/806ef7cc449bf3)

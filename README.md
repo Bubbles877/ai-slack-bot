@@ -167,3 +167,7 @@ We also use the following:
 ## 5. Repository
 
 - [Bubbles877/ai-slack-bot: AI Slack Bot / AI Slack ボット](https://github.com/Bubbles877/ai-slack-bot)
+
+## 6. References
+
+- [🤖 Build an In-House AI Assistant Platform with Slack and FastAPI!](https://zenn.dev/bubbles/articles/806ef7cc449bf3)
